@@ -1,0 +1,32 @@
+# Render Blueprint: the PrintFlow backend (also serves the website on its own address).
+# Secret values are entered in the Render dashboard, never stored in this file.
+services:
+  - type: web
+    name: printflow-api
+    runtime: docker
+    plan: free            # change to "starter" for always-on (no sleeping)
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: R2_ENDPOINT_URL
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: WORKER_SECRET_PIN
+        sync: false
+      - key: OWNER_SECRET_PIN
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false

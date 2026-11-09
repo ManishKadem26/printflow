@@ -1,0 +1,2957 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PrintFlow — Print &amp; Doorstep Delivery</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- PDF.js CDN for Real Client-Side PDF Page Counting -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous"></script>
+  <!-- Razorpay Checkout SDK -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script>
+    if (window['pdfjsLib']) {
+      window['pdfjsLib'].GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            obsidian: {
+              950: '#060911',
+              900: '#0B0F19',
+              800: '#111827',
+              700: '#1E293B',
+            },
+            cyber: {
+              indigo: '#6366F1',
+              violet: '#8B5CF6',
+              cyan: '#06B6D4',
+              emerald: '#10B981',
+              amber: '#F59E0B',
+              rose: '#F43F5E'
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          boxShadow: {
+            'neon-indigo': '0 0 25px -5px rgba(99, 102, 241, 0.45), 0 8px 16px -6px rgba(6, 182, 212, 0.25)',
+            'neon-cyan': '0 0 20px -4px rgba(6, 182, 212, 0.5)',
+            'glass-light': '0 10px 30px -5px rgba(79, 70, 229, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.05)',
+          }
+        }
+      }
+    };
+  </script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.1); }
+    ::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.4); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(6, 182, 212, 0.7); }
+
+    .cyber-bg-mesh {
+      background-image: 
+        radial-gradient(at 12% 10%, rgba(99, 102, 241, 0.16) 0px, transparent 45%),
+        radial-gradient(at 88% 15%, rgba(6, 182, 212, 0.14) 0px, transparent 45%),
+        radial-gradient(at 50% 90%, rgba(139, 92, 246, 0.10) 0px, transparent 50%);
+    }
+    .dark .cyber-bg-mesh {
+      background-image: 
+        radial-gradient(at 12% 10%, rgba(99, 102, 241, 0.22) 0px, transparent 50%),
+        radial-gradient(at 88% 15%, rgba(6, 182, 212, 0.18) 0px, transparent 50%),
+        radial-gradient(at 50% 90%, rgba(139, 92, 246, 0.15) 0px, transparent 55%);
+    }
+
+    .doc-sheet {
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.45), 0 0 20px -5px rgba(99, 102, 241, 0.25);
+    }
+    .doc-bw {
+      filter: grayscale(100%) contrast(1.12);
+    }
+    .spiral-coil {
+      background: repeating-linear-gradient(
+        to bottom,
+        #1e293b 0px,
+        #0f172a 4px,
+        transparent 4px,
+        transparent 10px
+      );
+    }
+    .wiro-coil {
+      background: repeating-linear-gradient(
+        to bottom,
+        #64748b 0px,
+        #0f172a 3px,
+        transparent 3px,
+        transparent 6px,
+        #64748b 6px,
+        #0f172a 9px,
+        transparent 9px,
+        transparent 16px
+      );
+    }
+    @keyframes slideInRow {
+      0% { opacity: 0; transform: translateY(-10px); background-color: rgba(99, 102, 241, 0.2); }
+      100% { opacity: 1; transform: translateY(0); background-color: transparent; }
+    }
+    .animate-new-row {
+      animation: slideInRow 0.8s ease-out forwards;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased bg-[#F0F4FA] dark:bg-obsidian-900 text-slate-900 dark:text-slate-100 cyber-bg-mesh selection:bg-cyber-indigo selection:text-white">
+
+  <!-- ================= TOP STATUS BAR ================= -->
+  <div class="bg-slate-950 text-slate-300 text-[11px] py-1.5 px-4 border-b border-indigo-500/20 relative z-40">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <span id="service-status-pill" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-500/15 text-slate-300 font-bold border border-slate-500/30">
+        <span id="service-status-dot" class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+        <span id="service-status-text">Checking service…</span>
+      </span>
+      <div class="flex items-center gap-4 ml-auto text-[11px]">
+        <span class="text-cyan-400"><i class="fa-solid fa-motorcycle mr-1"></i>Doorstep delivery</span>
+        <span class="text-slate-700">|</span>
+        <span class="text-indigo-300"><i class="fa-solid fa-trash-can mr-1"></i>Files deleted after printing</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= STICKY FUTURISTIC HEADER ================= -->
+  <header class="sticky top-0 z-40 bg-white/85 dark:bg-obsidian-900/85 backdrop-blur-xl border-b border-indigo-500/15 dark:border-slate-800/90 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <div class="flex items-center gap-3 cursor-pointer group" onclick="switchView('order')">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 via-violet-600 to-cyan-500 flex items-center justify-center text-white shadow-neon-indigo group-hover:scale-105 transition-transform">
+            <i class="fa-solid fa-print text-base"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span id="header-brand-title" class="text-lg font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-500 dark:from-white dark:via-indigo-200 dark:to-cyan-400 bg-clip-text text-transparent">PrintFlow</span>
+            </div>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium -mt-0.5">Print &amp; doorstep delivery</p>
+          </div>
+        </div>
+
+        <nav class="hidden md:flex items-center p-1 bg-slate-200/75 dark:bg-obsidian-800/90 rounded-xl border border-slate-300/70 dark:border-slate-700/70">
+          <button id="nav-order" onclick="switchView('order')" class="nav-btn px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white transition-all flex items-center gap-2">
+            <i class="fa-solid fa-print"></i>
+            <span>Order Prints</span>
+          </button>
+          <button id="nav-track" onclick="switchView('track')" class="nav-btn px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white transition-all flex items-center gap-2">
+            <i class="fa-solid fa-location-crosshairs"></i>
+            <span>Track Order</span>
+          </button>
+          <button id="nav-rates" onclick="switchView('rates')" class="nav-btn px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white transition-all flex items-center gap-2">
+            <i class="fa-solid fa-tags"></i>
+            <span>Prices</span>
+          </button>
+        </nav>
+
+        <div class="flex items-center gap-2.5">
+          <button onclick="toggleTheme()" id="theme-toggle-btn" class="w-9 h-9 rounded-xl border border-slate-300/80 dark:border-slate-700 bg-white dark:bg-obsidian-800 text-slate-700 dark:text-amber-400 hover:border-indigo-500 dark:hover:border-cyan-400 flex items-center justify-center transition-all shadow-sm" title="Switch light / dark theme">
+            <i id="theme-toggle-icon" class="fa-solid fa-sun text-sm"></i>
+          </button>
+
+          <!-- Visible Staff Console Button -->
+          <button id="nav-admin" onclick="requestAdminAccess()" class="nav-btn px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-violet-600 shadow-md transition-all flex items-center gap-2" title="Staff &amp; Owner Portal">
+            <i id="admin-lock-icon" class="fa-solid fa-lock text-cyan-300 text-sm"></i>
+            <span id="admin-btn-label">Staff Login</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Mobile Nav Bar (Includes Staff Portal) -->
+    <div class="md:hidden grid grid-cols-4 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-obsidian-900/95 text-[11px] font-bold">
+      <button id="mnav-order" onclick="switchView('order')" class="mnav-btn py-2.5 flex flex-col items-center gap-0.5">
+        <i class="fa-solid fa-print"></i><span>Order</span>
+      </button>
+      <button id="mnav-track" onclick="switchView('track')" class="mnav-btn py-2.5 flex flex-col items-center gap-0.5">
+        <i class="fa-solid fa-location-crosshairs"></i><span>Track</span>
+      </button>
+      <button id="mnav-rates" onclick="switchView('rates')" class="mnav-btn py-2.5 flex flex-col items-center gap-0.5">
+        <i class="fa-solid fa-tags"></i><span>Prices</span>
+      </button>
+      <button id="mnav-admin" onclick="requestAdminAccess()" class="mnav-btn py-2.5 flex flex-col items-center gap-0.5">
+        <i class="fa-solid fa-user-lock"></i><span>Staff</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= TOAST NOTIFICATIONS ================= -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+  <!-- ================= MAIN CONTENT AREA ================= -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+    <!-- ===================================================================== -->
+    <!-- VIEW 1: CUSTOMER PRINT STUDIO (SPLIT PANE)                            -->
+    <!-- ===================================================================== -->
+    <div id="view-order" class="view-panel">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <div class="lg:col-span-7 space-y-6">
+
+          <!-- STEP 1: FILE UPLOAD -->
+          <section class="bg-white/95 dark:bg-obsidian-800/90 backdrop-blur-md rounded-2xl border border-indigo-500/15 dark:border-slate-700/80 shadow-glass-light dark:shadow-xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700/70 flex items-center justify-between bg-gradient-to-r from-indigo-500/5 via-transparent to-cyan-500/5">
+              <div class="flex items-center gap-2.5">
+                <span class="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-600 to-cyan-500 text-white font-mono text-xs font-extrabold flex items-center justify-center shadow-sm">01</span>
+                <h2 class="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">Upload Documents or Photos</h2>
+              </div>
+              <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                <i class="fa-solid fa-fire-flame-curved mr-1"></i>Instant Auto-Purge
+              </span>
+            </div>
+
+            <div class="p-6">
+              <div id="drop-zone" class="relative border-2 border-dashed border-indigo-400/60 dark:border-indigo-500/40 hover:border-indigo-600 dark:hover:border-cyan-400 rounded-2xl p-7 text-center transition-all cursor-pointer bg-indigo-50/40 dark:bg-obsidian-900/60 hover:bg-indigo-50/80 dark:hover:bg-indigo-950/30 group">
+                <input type="file" id="file-input" class="hidden" multiple="" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                <div class="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-br from-indigo-600 to-cyan-500 text-white shadow-neon-indigo flex items-center justify-center group-hover:scale-110 transition-transform mb-3">
+                  <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+                </div>
+                <p class="text-sm font-extrabold text-slate-900 dark:text-white">Drop PDF, Word, or High-Res Images here, or <span class="text-indigo-600 dark:text-cyan-400 underline">browse</span></p>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">PDF pages are counted automatically • max 20 files<//p>
+              </div>
+
+              <div id="upload-progress-wrap" class="hidden mt-4 p-3.5 rounded-xl bg-slate-950 text-white text-xs border border-cyan-500/30">
+                <div class="flex justify-between items-center mb-1.5">
+                  <span id="upload-status-text" class="font-semibold flex items-center gap-2 text-cyan-400">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> Uploading...
+                  </span>
+                  <span id="upload-pct-text" class="font-mono font-bold text-white">0%</span>
+                </div>
+                <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div id="upload-bar" class="h-full bg-gradient-to-r from-indigo-500 to-cyan-400 transition-all duration-150" style="width: 0%"></div>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
+                  <span class="font-bold uppercase tracking-wider text-[10px]">Your Documents (<span id="queue-count">1</span>)</span>
+                </div>
+                <div id="file-queue-list" class="space-y-2"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- STEP 2: PAGE RANGE & N-UP GRID -->
+          <section class="bg-white/95 dark:bg-obsidian-800/90 backdrop-blur-md rounded-2xl border border-indigo-500/15 dark:border-slate-700/80 shadow-glass-light dark:shadow-xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700/70 flex items-center justify-between bg-gradient-to-r from-violet-500/5 via-transparent to-cyan-500/5">
+              <div class="flex items-center gap-2.5">
+                <span class="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 text-white font-mono text-xs font-extrabold flex items-center justify-center shadow-sm">02</span>
+                <h2 class="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">Page Range, Orientation &amp; Multi-Image A4 Grid</h2>
+              </div>
+              <span class="text-[11px] font-mono text-indigo-600 dark:text-cyan-400 font-bold">Live preview →</span>
+            </div>
+
+            <div class="p-6 space-y-6">
+              <div class="p-4 rounded-2xl bg-slate-100/80 dark:bg-obsidian-900/80 border border-slate-200/80 dark:border-slate-700/70">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <label class="block text-[11px] font-extrabold uppercase tracking-wider text-indigo-600 dark:text-cyan-400">PDF Page Selection / Trim</label>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400">Print entire document or extract specific pages (e.g., <code class="font-mono font-bold">3-5</code> or <code class="font-mono font-bold">1, 3-5, 9-12</code>).</p>
+                  </div>
+
+                  <div class="flex items-center gap-2 bg-white dark:bg-obsidian-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shrink-0">
+                    <button type="button" id="btn-range-all" onclick="setPageRangeMode('all')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white transition-all">
+                      All Pages (<span id="lbl-total-raw-pages">12</span>)
+                    </button>
+                    <button type="button" id="btn-range-custom" onclick="setPageRangeMode('custom')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-500 transition-all">
+                      Custom Range
+                    </button>
+                  </div>
+                </div>
+
+                <div id="custom-range-box" class="hidden mt-3.5 pt-3.5 border-t border-slate-200/80 dark:border-slate-700/70">
+                  <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <div class="relative flex-grow">
+                      <i class="fa-solid fa-scissors absolute left-3.5 top-3 text-indigo-500 text-xs"></i>
+                      <input type="text" id="custom-range-input" value="3-5" oninput="updateStudioState()" placeholder="e.g. 3-5 or 1, 3-5, 8-10" class="w-full pl-9 pr-4 py-2 rounded-xl border border-indigo-500/40 bg-white dark:bg-obsidian-800 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-cyan-400">
+                    </div>
+                    <div class="flex items-center gap-2 text-[11px]">
+                      <span class="text-slate-400">Quick:</span>
+                      <button type="button" onclick="applyQuickRange('3-5')" class="px-2 py-1 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-cyan-400 font-mono font-bold">3-5</button>
+                      <button type="button" onclick="applyQuickRange('1-5')" class="px-2 py-1 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-cyan-400 font-mono font-bold">1-5</button>
+                    </div>
+                  </div>
+                  <p id="range-validation-msg" class="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 mt-2 font-semibold">
+                    ✓ Extracting 3 pages out of 12 total.
+                  </p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Page Orientation</label>
+                  <div class="grid grid-cols-2 gap-2.5">
+                    <label class="cursor-pointer">
+                      <input type="radio" name="orientation-mode" value="portrait" checked="" class="peer sr-only" onchange="updateStudioState()">
+                      <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-obsidian-900/50 peer-checked:border-indigo-500 peer-checked:bg-gradient-to-br peer-checked:from-indigo-600 peer-checked:to-violet-600 peer-checked:text-white transition-all flex items-center gap-3">
+                        <div class="w-6 h-8 border-2 border-current rounded-sm flex items-center justify-center text-[9px] font-mono font-bold shrink-0">A4</div>
+                        <div>
+                          <div class="text-xs font-extrabold">Normal</div>
+                          <div class="text-[10px] opacity-75">Portrait</div>
+                        </div>
+                      </div>
+                    </label>
+
+                    <label class="cursor-pointer">
+                      <input type="radio" name="orientation-mode" value="landscape" class="peer sr-only" onchange="updateStudioState()">
+                      <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-obsidian-900/50 peer-checked:border-cyan-500 peer-checked:bg-gradient-to-br peer-checked:from-indigo-600 peer-checked:to-cyan-600 peer-checked:text-white transition-all flex items-center gap-3">
+                        <div class="w-8 h-6 border-2 border-current rounded-sm flex items-center justify-center text-[9px] font-mono font-bold shrink-0">A4</div>
+                        <div>
+                          <div class="text-xs font-extrabold">Landscape</div>
+                          <div class="text-[10px] opacity-75">Wide</div>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <div class="flex items-center justify-between mb-2">
+                    <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Images / Pages per A4 Sheet</label>
+                    <span class="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 font-bold">Multi-Collage</span>
+                  </div>
+                  <select id="nup-layout" onchange="updateStudioState()" class="w-full px-3.5 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-900 text-xs font-extrabold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="1" selected="">1-Up • Standard Full Page (1 per A4)</option>
+                    <option value="2">2-Up • Half-Sheet Split (2 per A4)</option>
+                    <option value="4">4-Up • Quarter Grid (4 per A4)</option>
+                    <option value="6">6-Up • Lecture Handout Grid (6 per A4)</option>
+                    <option value="9">9-Up • Contact / Wallet Mini Grid (9 per A4)</option>
+                    <option value="16">16-Up • Passport Photo Sheet (16 Photos +₹10)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- STEP 3: INK, PAPER & BINDING -->
+          <section class="bg-white/95 dark:bg-obsidian-800/90 backdrop-blur-md rounded-2xl border border-indigo-500/15 dark:border-slate-700/80 shadow-glass-light dark:shadow-xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700/70 flex items-center justify-between bg-gradient-to-r from-cyan-500/5 via-transparent to-indigo-500/5">
+              <div class="flex items-center gap-2.5">
+                <span class="w-6 h-6 rounded-lg bg-gradient-to-br from-cyan-500 to-indigo-600 text-white font-mono text-xs font-extrabold flex items-center justify-center shadow-sm">03</span>
+                <h2 class="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">Ink Mode, Paper Weight &amp; Bindery</h2>
+              </div>
+              <span class="text-xs text-slate-400 font-mono">Dynamic Rate Engine</span>
+            </div>
+
+            <div class="p-6 space-y-6">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Ink Output</label>
+                  <div class="grid grid-cols-2 gap-2.5">
+                    <label class="cursor-pointer">
+                      <input type="radio" name="color-mode" value="bw" checked="" class="peer sr-only" onchange="updateStudioState()">
+                      <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-obsidian-900/50 peer-checked:border-indigo-500 peer-checked:bg-slate-900 dark:peer-checked:bg-indigo-600 peer-checked:text-white transition-all">
+                        <div class="flex items-center justify-between mb-1">
+                          <i class="fa-solid fa-droplet-slash text-sm"></i>
+                          <span class="font-mono text-xs font-bold">₹<span id="lbl-rate-bw">2.00</span>/p</span>
+                        </div>
+                        <div class="text-xs font-extrabold">Black &amp; White</div>
+                      </div>
+                    </label>
+
+                    <label class="cursor-pointer">
+                      <input type="radio" name="color-mode" value="color" class="peer sr-only" onchange="updateStudioState()">
+                      <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-obsidian-900/50 peer-checked:border-cyan-400 peer-checked:bg-gradient-to-br peer-checked:from-indigo-600 peer-checked:via-violet-600 peer-checked:to-cyan-500 peer-checked:text-white transition-all">
+                        <div class="flex items-center justify-between mb-1">
+                          <i class="fa-solid fa-palette text-sm"></i>
+                          <span class="font-mono text-xs font-bold">₹<span id="lbl-rate-color">8.00</span>/p</span>
+                        </div>
+                        <div class="text-xs font-extrabold">Full Colour</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Sheet Sides</label>
+                  <div class="grid grid-cols-2 gap-2.5">
+                    <label class="cursor-pointer">
+                      <input type="radio" name="duplex-mode" value="single" checked="" class="peer sr-only" onchange="updateStudioState()">
+                      <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-obsidian-900/50 peer-checked:border-indigo-500 peer-checked:bg-slate-900 dark:peer-checked:bg-indigo-600 peer-checked:text-white transition-all">
+                        <div class="flex items-center justify-between mb-1">
+                          <i class="fa-regular fa-file text-sm"></i>
+                          <span class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">1-Side</span>
+                        </div>
+                        <div class="text-xs font-extrabold">Single Sided</div>
+                      </div>
+                    </label>
+
+                    <label class="cursor-pointer">
+                      <input type="radio" name="duplex-mode" value="double" class="peer sr-only" onchange="updateStudioState()">
+                      <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-obsidian-900/50 peer-checked:border-emerald-500 peer-checked:bg-gradient-to-br peer-checked:from-emerald-600 peer-checked:to-teal-600 peer-checked:text-white transition-all">
+                        <div class="flex items-center justify-between mb-1">
+                          <i class="fa-solid fa-book-open text-sm"></i>
+                          <span class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-900 font-extrabold">Save 25%</span>
+                        </div>
+                        <div class="text-xs font-extrabold">Back-to-Back</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Paper Dimension</label>
+                  <select id="paper-size" onchange="updateStudioState()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-900 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="A4" selected="">A4 Standard (210 × 297 mm)</option>
+                    <option value="A3">A3 Poster / Blueprint (+₹5/sh)</option>
+                    <option value="Legal">Legal Stamp Bond (+₹1/sh)</option>
+                    <option value="Photo">A4 Glossy Photo Sheet (+₹15/sh)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Paper Weight (GSM)</label>
+                  <select id="paper-gsm" onchange="updateStudioState()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-900 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="75" selected="">75 GSM Standard</option>
+                    <option value="100">100 GSM Executive Bond (+₹1)</option>
+                    <option value="300">300 GSM Heavy Art Card (+₹6)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Number of Copies</label>
+                  <div class="flex items-center border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-obsidian-900 overflow-hidden">
+                    <button type="button" onclick="adjustCopies(-1)" class="w-10 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 font-bold text-sm transition-colors">−</button>
+                    <input type="number" id="copy-count" value="1" min="1" max="200" onchange="updateStudioState()" class="w-full text-center bg-transparent font-mono text-xs font-extrabold text-slate-900 dark:text-white focus:outline-none">
+                    <button type="button" onclick="adjustCopies(1)" class="w-10 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 font-bold text-sm transition-colors">+</button>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Binding &amp; Finishing Style</label>
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  <label class="cursor-pointer">
+                    <input type="radio" name="binding-opt" value="none" checked="" class="peer sr-only" onchange="updateStudioState()">
+                    <div class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-obsidian-900/50 peer-checked:border-indigo-500 peer-checked:bg-indigo-600 peer-checked:text-white text-center transition-all">
+                      <i class="fa-regular fa-file-lines text-sm mb-1"></i>
+                      <div class="text-[11px] font-bold">Loose Sheets</div>
+                      <div class="text-[10px] opacity-70 font-mono">Free</div>
+                    </div>
+                  </label>
+
+                  <label class="cursor-pointer">
+                    <input type="radio" name="binding-opt" value="staple" class="peer sr-only" onchange="updateStudioState()">
+                    <div class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-obsidian-900/50 peer-checked:border-indigo-500 peer-checked:bg-indigo-600 peer-checked:text-white text-center transition-all">
+                      <i class="fa-solid fa-paperclip text-sm mb-1"></i>
+                      <div class="text-[11px] font-bold">Corner Staple</div>
+                      <div class="text-[10px] opacity-75 font-mono">+₹5</div>
+                    </div>
+                  </label>
+
+                  <label class="cursor-pointer">
+                    <input type="radio" name="binding-opt" value="spiral" class="peer sr-only" onchange="updateStudioState()">
+                    <div class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-obsidian-900/50 peer-checked:border-indigo-500 peer-checked:bg-indigo-600 peer-checked:text-white text-center transition-all">
+                      <i class="fa-solid fa-grip-lines-vertical text-sm mb-1"></i>
+                      <div class="text-[11px] font-bold">Soft Spiral</div>
+                      <div class="text-[10px] opacity-75 font-mono">+₹45</div>
+                    </div>
+                  </label>
+
+                  <label class="cursor-pointer">
+                    <input type="radio" name="binding-opt" value="wiro" class="peer sr-only" onchange="updateStudioState()">
+                    <div class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-obsidian-900/50 peer-checked:border-indigo-500 peer-checked:bg-indigo-600 peer-checked:text-white text-center transition-all">
+                      <i class="fa-solid fa-book-bookmark text-sm mb-1"></i>
+                      <div class="text-[11px] font-bold">Twin Wiro</div>
+                      <div class="text-[10px] opacity-75 font-mono">+₹75</div>
+                    </div>
+                  </label>
+
+                  <label class="cursor-pointer col-span-2 sm:col-span-1">
+                    <input type="radio" name="binding-opt" value="hard" class="peer sr-only" onchange="updateStudioState()">
+                    <div class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-obsidian-900/50 peer-checked:border-amber-500 peer-checked:bg-gradient-to-br peer-checked:from-amber-500 peer-checked:to-yellow-600 peer-checked:text-slate-950 text-center transition-all">
+                      <i class="fa-solid fa-book text-sm mb-1"></i>
+                      <div class="text-[11px] font-extrabold">Hardcover</div>
+                      <div class="text-[10px] opacity-85 font-mono font-bold">+₹220</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <input type="text" id="order-notes" placeholder="Custom operator notes (e.g., 'Keep 1 inch margin on left')..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-900 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              </div>
+            </div>
+          </section>
+
+          <!-- STEP 4: DOORSTEP DELIVERY & CONTACT -->
+          <section class="bg-white/95 dark:bg-obsidian-800/90 backdrop-blur-md rounded-2xl border border-indigo-500/15 dark:border-slate-700/80 shadow-glass-light dark:shadow-xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700/70 flex items-center justify-between bg-gradient-to-r from-emerald-500/5 via-transparent to-indigo-500/5">
+              <div class="flex items-center gap-2.5">
+                <span class="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-mono text-xs font-extrabold flex items-center justify-center shadow-sm">04</span>
+                <h2 class="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">Delivery Address &amp; Contact</h2>
+              </div>
+              <span class="text-[11px] font-mono font-bold text-indigo-600 dark:text-cyan-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
+                <i class="fa-solid fa-truck-fast mr-1"></i>100% Doorstep Fulfillment
+              </span>
+            </div>
+
+            <div class="p-6 space-y-5">
+              <div class="p-4 rounded-xl border border-indigo-500/30 bg-gradient-to-r from-indigo-500/10 via-violet-500/5 to-cyan-500/10 flex items-start justify-between gap-3">
+                <div class="flex items-start gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-neon-indigo">
+                    <i class="fa-solid fa-motorcycle text-sm"></i>
+                  </div>
+                  <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span class="text-xs font-extrabold text-slate-900 dark:text-white">Hyperlocal Sealed Doorstep Courier</span>
+                      <span id="delivery-fee-pill" class="text-[10px] font-mono font-extrabold text-indigo-600 dark:text-cyan-400 bg-indigo-500/15 px-2 py-0.5 rounded border border-indigo-500/30">+₹<span id="lbl-rate-delivery">40</span></span>
+                    </div>
+                    <p class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">Dispatched in weatherproof hard-board mailers straight to your address.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">Recipient Full Name <span class="text-rose-500">*</span></label>
+                  <input type="text" id="cust-name" placeholder="e.g. Manish K." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-900 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">WhatsApp Mobile Number <span class="text-rose-500">*</span></label>
+                  <input type="tel" id="cust-phone" placeholder="10-digit mobile number" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-900 text-xs font-mono font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+              </div>
+
+              <!-- GPS Auto Detect Location Action Bar -->
+              <div class="pt-2">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-gradient-to-r from-indigo-500/10 via-violet-500/5 to-cyan-500/10 border border-indigo-500/25">
+                  <div class="flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs shrink-0 shadow-sm">
+                      <i class="fa-solid fa-location-crosshairs"></i>
+                    </span>
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-extrabold text-slate-900 dark:text-white">Auto Detect Delivery Location</span>
+                        <span id="gps-accuracy-badge" class="hidden text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">GPS Lock</span>
+                      </div>
+                      <p class="text-[10px] text-slate-500 dark:text-slate-400">Uses your location or pincode to fill in the address</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <button type="button" id="btn-detect-gps" onclick="autoDetectDeliveryLocation()" class="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 shrink-0">
+                      <i id="gps-icon" class="fa-solid fa-location-dot text-amber-300"></i>
+                      <span id="gps-btn-label">Auto Detect Location</span>
+                    </button>
+                    <button type="button" onclick="openManualAreaPicker()" class="px-2.5 py-2 rounded-xl bg-slate-200 dark:bg-obsidian-900 border border-slate-300 dark:border-slate-700 hover:border-indigo-400 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all" title="Search Area or Landmark">
+                      <i class="fa-solid fa-magnifying-glass-location text-indigo-500"></i>
+                    </button>
+                  </div>
+                </div>
+                <div id="gps-status-feedback" class="hidden mt-1.5 px-2 text-[11px] font-medium font-mono text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5">
+                  <i class="fa-solid fa-circle-notch fa-spin text-[10px]"></i>
+                  <span id="gps-status-text">Detecting your location...</span>
+                </div>
+              </div>
+
+              <div class="space-y-3.5 pt-2 border-t border-slate-100 dark:border-slate-700/70">
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-300">Complete Doorstep Delivery Address <span class="text-rose-500">*</span></label>
+                    <span class="text-[10px] text-slate-400 font-mono">Include House/Flat #</span>
+                  </div>
+                  <input type="text" id="cust-street" placeholder="House / Flat No., Floor, Building Name, Street" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-900 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <div>
+                    <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">Nearby Landmark <span class="text-rose-500">*</span></label>
+                    <input type="text" id="cust-landmark" placeholder="e.g. Near Metro Pillar" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-900 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">City / Zone</label>
+                    <input type="text" id="cust-city" value="Hyderabad" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-900 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  </div>
+                  <div>
+                    <div class="flex items-center justify-between mb-1">
+                      <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-300">Pincode <span class="text-rose-500">*</span></label>
+                      <span id="pin-lookup-spinner" class="hidden text-[10px] text-cyan-500 font-mono"><i class="fa-solid fa-circle-notch fa-spin"></i> Auto-filling...</span>
+                    </div>
+                    <input type="text" id="cust-pincode" maxlength="6" oninput="handlePincodeAutoLookup(this.value)" placeholder="500081" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-900 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- RIGHT COLUMN: 3D PREVIEW & RECEIPT -->
+        <div class="lg:col-span-5 lg:sticky lg:top-20 space-y-5">
+          <div class="bg-slate-950 rounded-2xl p-5 text-white shadow-2xl border border-indigo-500/30 relative overflow-hidden">
+            <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400"></div>
+
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                <span class="text-[11px] font-mono uppercase tracking-wider text-cyan-400 font-bold">Live Print Preview</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span id="preview-badge-orient" class="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Portrait</span>
+                <span id="preview-badge-nup" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">1-Up Full</span>
+              </div>
+            </div>
+
+            <div class="h-64 bg-obsidian-950 rounded-xl border border-slate-800/90 flex items-center justify-center relative p-6 select-none overflow-hidden">
+              <div class="absolute inset-0 opacity-20" style="background-image: linear-gradient(to right, #334155 1px, transparent 1px), linear-gradient(to bottom, #334155 1px, transparent 1px); background-size: 20px 20px;"></div>
+
+              <div id="mockup-sheet" class="doc-sheet doc-bw relative w-36 h-48 bg-white rounded-r-md rounded-l-sm text-slate-900 p-2.5 flex flex-col justify-between border border-slate-300 z-10">
+                <div id="mockup-hardcover" class="hidden absolute inset-0 bg-slate-900 rounded-r-md rounded-l-sm border-l-8 border-amber-500 p-3 flex flex-col justify-between text-center z-30">
+                  <div class="text-[7px] font-mono tracking-widest text-amber-400/80 uppercase">2026 Edition</div>
+                  <div class="border border-amber-500/50 py-2 px-1 rounded">
+                    <div class="text-[9px] font-bold text-amber-300 uppercase tracking-wider leading-tight">Bound<br>Volume</div>
+                  </div>
+                  <div class="text-[7px] text-amber-400/60 font-mono">GOLD FOIL</div>
+                </div>
+
+                <div id="mockup-staple" class="hidden absolute top-2 left-2 w-3.5 h-1 bg-slate-600 -rotate-45 rounded-full shadow-sm z-30"></div>
+                <div id="mockup-spiral" class="hidden spiral-coil absolute -left-2 top-2 bottom-2 w-3.5 z-30 rounded-sm"></div>
+                <div id="mockup-wiro" class="hidden wiro-coil absolute -left-2 top-2 bottom-2 w-3.5 z-30"></div>
+
+                <div class="flex items-center justify-between text-[7px] font-mono text-slate-400 border-b border-slate-100 pb-1 pl-1">
+                  <span id="mockup-range-tag" class="font-bold text-indigo-600">PG 1-12</span>
+                  <span id="mockup-page-indicator">A4 • 75G</span>
+                </div>
+
+                <div id="mockup-grid-body" class="flex-grow my-1.5 pl-1 grid grid-cols-1 gap-1.5 overflow-hidden"></div>
+
+                <div class="flex items-center justify-between pt-1 border-t border-slate-100 pl-1">
+                  <span class="text-[7px] font-mono font-bold text-slate-500" id="mockup-color-tag">MONOCHROME</span>
+                  <span class="text-[7px] font-mono text-emerald-600 font-bold" id="mockup-duplex-tag">1-SIDED</span>
+                </div>
+              </div>
+
+              <div id="mockup-stack-1" class="w-36 h-48 bg-slate-300/80 rounded-r-md absolute translate-x-1.5 translate-y-1.5 z-0 border border-slate-400 transition-all duration-300"></div>
+              <div id="mockup-stack-2" class="w-36 h-48 bg-slate-400/60 rounded-r-md absolute translate-x-3 translate-y-3 -z-0 border border-slate-500 transition-all duration-300"></div>
+
+              <div class="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-[11px] bg-slate-900/95 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-800 z-20">
+                <span class="text-slate-300 truncate max-w-[175px] font-medium" id="preview-file-title">BTech_Thesis.pdf</span>
+                <span class="font-mono font-extrabold text-cyan-400" id="preview-sheets-count">12 Sheets Required</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- CHECKOUT CARD -->
+          <div class="bg-white/95 dark:bg-obsidian-800/95 backdrop-blur-md rounded-2xl border border-indigo-500/20 dark:border-slate-700 p-6 shadow-glass-light dark:shadow-2xl">
+            <div class="flex items-center justify-between pb-3.5 border-b border-slate-100 dark:border-slate-700">
+              <div>
+                <h3 class="text-sm font-extrabold text-slate-900 dark:text-white">Price Estimate</h3>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">Auto-computed for range &amp; binding</p>
+              </div>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/10 text-indigo-600 dark:text-cyan-400 border border-indigo-500/20">GST 5% Incl.</span>
+            </div>
+
+            <div class="py-4 space-y-2.5 text-xs border-b border-slate-100 dark:border-slate-700">
+              <div class="flex justify-between text-slate-600 dark:text-slate-300">
+                <span>Active Printable Pages:</span>
+                <span class="font-mono font-bold text-slate-900 dark:text-white"><span id="calc-total-pages">12</span> pages × <span id="calc-copies-inline">1</span> copy</span>
+              </div>
+              <div class="flex justify-between text-slate-600 dark:text-slate-300">
+                <span>Layout &amp; Orientation:</span>
+                <span class="font-mono font-semibold text-indigo-600 dark:text-cyan-400" id="calc-layout-desc">Portrait • 1-Up</span>
+              </div>
+              <div class="flex justify-between text-slate-600 dark:text-slate-300">
+                <span>Physical Paper Sheets:</span>
+                <span class="font-mono font-bold text-slate-900 dark:text-white" id="calc-physical-sheets">12 sheets (A4)</span>
+              </div>
+              <div class="flex justify-between text-slate-600 dark:text-slate-300">
+                <span>Print Charge:</span>
+                <span class="font-mono font-bold text-slate-900 dark:text-white">₹<span id="calc-print-cost">24.00</span></span>
+              </div>
+              <div class="flex justify-between text-slate-600 dark:text-slate-300">
+                <span>Bindery:</span>
+                <span class="font-mono font-bold text-slate-900 dark:text-white">₹<span id="calc-binding-cost">0.00</span></span>
+              </div>
+              <div class="flex justify-between text-slate-600 dark:text-slate-300">
+                <span>Doorstep Courier:</span>
+                <span class="font-mono font-bold text-indigo-600 dark:text-cyan-400" id="calc-delivery-cost">₹40.00</span>
+              </div>
+              <div class="flex justify-between text-slate-400 text-[11px]">
+                <span>Included GST (5%):</span>
+                <span class="font-mono">₹<span id="calc-gst-cost">3.20</span></span>
+              </div>
+            </div>
+
+            <div class="py-4 flex items-baseline justify-between">
+              <div>
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Total Payable</span>
+                <div class="text-3xl font-extrabold bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-500 dark:from-white dark:via-indigo-200 dark:to-cyan-400 bg-clip-text text-transparent font-mono tracking-tight">₹<span id="calc-grand-total">67.20</span></div>
+              </div>
+              <div class="text-right">
+                <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 block"><i class="fa-solid fa-motorcycle mr-1"></i>Doorstep Dispatch</span>
+                <span class="text-[10px] text-slate-400">UPI / GPay / PhonePe</span>
+              </div>
+            </div>
+
+            <button id="btn-checkout" onclick="initiateCheckout()" class="w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-extrabold text-xs uppercase tracking-wider shadow-neon-indigo transition-all flex items-center justify-center gap-2.5 active:scale-[0.99]">
+              <i class="fa-solid fa-qrcode text-sm"></i>
+              <span>Continue to Payment</span>
+              <i class="fa-solid fa-arrow-right text-xs ml-auto"></i>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ================= VIEW 2: TRACKING ================= -->
+    <div id="view-track" class="view-panel hidden">
+      <div class="max-w-2xl mx-auto">
+        <div class="text-center mb-7">
+          <span class="px-3 py-1 rounded-full text-[11px] font-mono font-bold bg-indigo-500/10 text-indigo-600 dark:text-cyan-400 border border-indigo-500/20">ORDER STATUS</span>
+          <h2 class="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">Track Your Print Order</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Enter your Order ID and the mobile number you ordered with.</p>
+        </div>
+
+        <div class="bg-white dark:bg-obsidian-800 p-2 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row gap-2">
+          <input type="text" id="track-search-input" placeholder="Order ID (e.g. PF-3A9F1C)" autocomplete="off" onkeydown="if(event.key==='Enter') performTrackingSearch()" class="w-full px-4 py-2.5 rounded-xl text-xs font-mono font-bold uppercase bg-slate-50 dark:bg-obsidian-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <input type="tel" id="track-phone-input" placeholder="Mobile number" maxlength="14" inputmode="numeric" onkeydown="if(event.key==='Enter') performTrackingSearch()" class="w-full sm:w-44 px-4 py-2.5 rounded-xl text-xs font-mono font-bold bg-slate-50 dark:bg-obsidian-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <button onclick="performTrackingSearch()" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-xs transition-all shrink-0 shadow-md">
+            Track Order
+          </button>
+        </div>
+
+        <p id="track-recent-pills" class="mt-2.5 text-center text-[11px] text-slate-400">Your Order ID is on the receipt shown after payment.</p>
+
+        <div id="tracking-result-box" class="hidden mt-6 bg-white dark:bg-obsidian-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-xl">
+          <div class="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-100 dark:border-slate-700">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-lg font-extrabold font-mono text-slate-900 dark:text-white" id="track-order-id-label">PF-8419</span>
+                <span id="track-status-pill" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">Printing in Progress</span>
+              </div>
+              <p class="text-xs text-slate-400 mt-0.5" id="track-timestamp">Placed Today</p>
+            </div>
+
+            <div id="track-cloud-badge" class="px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold flex items-center gap-2">
+              <i class="fa-solid fa-cloud-lock"></i>
+              <span>File stored securely</span>
+            </div>
+          </div>
+
+          <!-- Customer Rejection Alert Notice -->
+          <div id="track-rejection-banner" class="hidden my-4 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-lg bg-rose-600 text-white flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+              </div>
+              <div class="space-y-2 flex-grow">
+                <div>
+                  <h4 class="text-xs font-extrabold uppercase tracking-wider text-rose-600 dark:text-rose-400">Payment Verification Failed</h4>
+                  <p class="text-xs text-slate-700 dark:text-slate-200 mt-0.5" id="track-rejection-reason">The 12-digit UPI reference number entered does not match any incoming payment in our shop account.</p>
+                </div>
+                <div class="pt-2 flex flex-wrap items-center gap-2">
+                  <input type="text" id="track-resubmit-utr" maxlength="12" placeholder="Enter Correct 12-Digit UTR" class="px-3 py-1.5 rounded-lg border border-rose-400 bg-white dark:bg-obsidian-900 text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none">
+                  <button onclick="resubmitCustomerUtr()" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-sm transition-all">
+                    Re-Verify UTR
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="py-8 px-2">
+            <div class="relative flex items-center justify-between">
+              <div class="absolute left-0 top-4 h-1 w-full bg-slate-200 dark:bg-slate-700 -z-0 rounded-full"></div>
+              <div id="track-stepper-fill" class="absolute left-0 top-4 h-1 bg-gradient-to-r from-indigo-500 to-cyan-400 transition-all duration-500 -z-0 rounded-full" style="width: 35%;"></div>
+
+              <div class="flex flex-col items-center relative z-10">
+                <div id="step-node-1" class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs ring-4 ring-white dark:ring-obsidian-800"><i class="fa-solid fa-check"></i></div>
+                <span class="text-[10px] font-bold mt-2 text-slate-700 dark:text-slate-200">Received</span>
+              </div>
+              <div class="flex flex-col items-center relative z-10">
+                <div id="step-node-2" class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs ring-4 ring-white dark:ring-obsidian-800"><i class="fa-solid fa-print"></i></div>
+                <span class="text-[10px] font-bold mt-2 text-slate-700 dark:text-slate-200">Printing</span>
+              </div>
+              <div class="flex flex-col items-center relative z-10">
+                <div id="step-node-3" class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 flex items-center justify-center text-xs ring-4 ring-white dark:ring-obsidian-800"><i class="fa-solid fa-book"></i></div>
+                <span class="text-[10px] font-bold mt-2 text-slate-400">Binding &amp; QC</span>
+              </div>
+              <div class="flex flex-col items-center relative z-10">
+                <div id="step-node-4" class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 flex items-center justify-center text-xs ring-4 ring-white dark:ring-obsidian-800"><i class="fa-solid fa-motorcycle"></i></div>
+                <span class="text-[10px] font-bold mt-2 text-slate-400">Dispatched</span>
+              </div>
+              <div class="flex flex-col items-center relative z-10">
+                <div id="step-node-5" class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 flex items-center justify-center text-xs ring-4 ring-white dark:ring-obsidian-800"><i class="fa-solid fa-house-circle-check"></i></div>
+                <span class="text-[10px] font-bold mt-2 text-slate-400">Delivered</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-xl bg-slate-50 dark:bg-obsidian-900 border border-slate-100 dark:border-slate-700/80 text-xs">
+            <div><span class="text-slate-400 block text-[10px]">Document</span><span id="track-file" class="font-bold text-slate-800 dark:text-white truncate block">-</span></div>
+            <div><span class="text-slate-400 block text-[10px]">Page Specs</span><span id="track-pages" class="font-bold text-slate-800 dark:text-white">-</span></div>
+            <div><span class="text-slate-400 block text-[10px]">Layout / Ink</span><span id="track-type" class="font-bold text-indigo-600 dark:text-cyan-400">-</span></div>
+            <div><span class="text-slate-400 block text-[10px]">Delivery Destination</span><span id="track-mode" class="font-bold text-slate-800 dark:text-white truncate block">-</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= VIEW 3: RATE MATRIX ================= -->
+    <div id="view-rates" class="view-panel hidden">
+      <div class="max-w-4xl mx-auto space-y-6">
+        <div class="text-center">
+          <span class="px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-indigo-500/10 text-indigo-600 dark:text-cyan-400 border border-indigo-500/20">TRANSPARENT TARIFFS</span>
+          <h2 class="text-2xl font-extrabold text-slate-900 dark:text-white mt-2">Standard Rate Matrix</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div class="bg-white dark:bg-obsidian-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-lg">
+            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold">Monochrome</span>
+            <h3 class="text-base font-extrabold text-slate-900 dark:text-white mt-2">Black &amp; White Laser</h3>
+            <div class="my-4">
+              <span class="text-3xl font-extrabold font-mono text-slate-900 dark:text-white">₹<span id="rate-card-bw">2.00</span></span>
+              <span class="text-xs text-slate-400"> / single side</span>
+            </div>
+          </div>
+
+          <div class="bg-gradient-to-br from-indigo-900 via-slate-900 to-obsidian-950 p-6 rounded-2xl border border-indigo-500/40 text-white shadow-neon-indigo">
+            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-cyan-400 text-slate-950 font-extrabold">High Fidelity</span>
+            <h3 class="text-base font-extrabold mt-2">Full Colour CMYK</h3>
+            <div class="my-4">
+              <span class="text-3xl font-extrabold font-mono text-cyan-400">₹<span id="rate-card-color">8.00</span></span>
+              <span class="text-xs text-slate-300"> / single side</span>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-obsidian-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-lg">
+            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold">Bindery</span>
+            <h3 class="text-base font-extrabold text-slate-900 dark:text-white mt-2">Binding &amp; Finishing</h3>
+            <div class="my-4">
+              <span class="text-3xl font-extrabold font-mono text-slate-900 dark:text-white">₹<span id="rate-card-spiral">45</span></span>
+              <span class="text-xs text-slate-400"> / spiral book</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= VIEW 4: ADMIN CONSOLE ================= -->
+    <div id="view-admin" class="view-panel hidden space-y-6">
+      <div class="bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 text-white p-5 rounded-2xl border border-indigo-500/30 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-xl">
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span class="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold">Auto-refreshing every 15s</span>
+            <span id="active-role-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold bg-cyan-400 text-slate-950">OWNER ACCESS (FULL)</span>
+          </div>
+          <div class="flex items-center gap-2 mt-1">
+            <i class="fa-solid fa-unlock-keyhole text-emerald-400 text-sm"></i>
+            <h2 id="admin-console-title" class="text-xl font-extrabold">Staff Console</h2>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button onclick="fetchStaffOrders(true)" class="px-3 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors">
+            <i class="fa-solid fa-rotate text-cyan-400"></i>
+            <span>Refresh</span>
+          </button>
+
+          <button id="chime-toggle-btn" onclick="toggleAudioChime()" class="px-3.5 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-xs font-semibold flex items-center gap-2 transition-colors">
+            <i id="chime-icon" class="fa-solid fa-volume-high text-emerald-400"></i>
+            <span id="chime-label">Chime: ON</span>
+          </button>
+
+          <button id="btn-owner-rates" onclick="openPriceModal()" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold flex items-center gap-2 transition-colors">
+            <i class="fa-solid fa-sliders"></i>
+            <span>Shop Branding, UPI &amp; Rates (Owner)</span>
+          </button>
+
+          <button onclick="lockAdminSession()" class="px-3 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 text-xs font-bold flex items-center gap-1.5 transition-colors">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span>Lock</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="owner-backend-bar" class="bg-white dark:bg-obsidian-800 px-4 py-3 rounded-2xl border border-indigo-500/20 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-2.5">
+          <span class="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-cyan-400 font-bold">
+            <i class="fa-solid fa-server"></i>
+          </span>
+          <div>
+            <span class="font-extrabold text-slate-900 dark:text-white">Backend server URL (this device)</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <input type="text" id="backend-api-url-input" value="http://localhost:8000" class="w-full sm:w-72 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-900 font-mono text-xs font-bold text-slate-900 dark:text-white focus:outline-none">
+          <button onclick="saveBackendApiUrl()" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shrink-0 transition-colors">
+            Save
+          </button>
+        </div>
+      </div>
+
+      <div id="worker-mode-banner" class="hidden p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <i class="fa-solid fa-user-gear text-sm"></i>
+          <span><strong>Shop Worker Mode Active:</strong> You can download print jobs and update order stages.</span>
+        </div>
+        <button onclick="openStaffAuthModal()" class="px-2.5 py-1 rounded-lg bg-amber-500 text-slate-950 font-extrabold text-[11px] shrink-0">Unlock Owner Mode</button>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-obsidian-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <span class="text-[11px] font-bold uppercase text-slate-400">Active Print Queue</span>
+          <div class="text-2xl font-extrabold font-mono text-slate-900 dark:text-white mt-1" id="kpi-pending-jobs">2</div>
+        </div>
+
+        <div class="bg-white dark:bg-obsidian-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 relative overflow-hidden">
+          <span class="text-[11px] font-bold uppercase text-slate-400">Today's Revenue</span>
+          <div class="text-2xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400 mt-1" id="kpi-revenue-wrap">₹<span id="kpi-revenue">322</span></div>
+          <span class="text-[11px] text-emerald-500 font-semibold" id="kpi-revenue-sub">UPI Verified</span>
+        </div>
+
+        <div class="bg-white dark:bg-obsidian-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <span class="text-[11px] font-bold uppercase text-slate-400">Files Waiting in Storage</span>
+          <div class="text-2xl font-extrabold font-mono text-indigo-600 dark:text-cyan-400 mt-1" id="kpi-storage">4.2 MB</div>
+        </div>
+
+        <div class="bg-white dark:bg-obsidian-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <span class="text-[11px] font-bold uppercase text-slate-400">Files Auto-Purged</span>
+          <div class="text-2xl font-extrabold font-mono text-rose-500 mt-1" id="kpi-purged">0</div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-obsidian-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl overflow-hidden">
+        <div class="p-4 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <div class="relative w-full sm:w-64">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+              <input type="text" id="admin-search-input" onkeyup="filterAdminOrders()" placeholder="Filter by ID, customer..." class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-obsidian-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none">
+            </div>
+            <select id="admin-status-filter" onchange="filterAdminOrders()" class="text-xs bg-slate-50 dark:bg-obsidian-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 font-bold text-slate-700 dark:text-slate-200 focus:outline-none">
+              <option value="ALL">All Stages</option>
+              <option value="Awaiting UTR Verification">Verify UTR</option>
+              <option value="Awaiting Payment">Awaiting Payment</option>
+              <option value="Payment Rejected">Payment Rejected</option>
+              <option value="Order Received">Order Received</option>
+              <option value="Printing in Progress">Printing in Progress</option>
+              <option value="Binding &amp; QC">Binding &amp; QC</option>
+              <option value="Out for Delivery">Out for Delivery</option>
+              <option value="Delivered">Delivered</option>
+            </select>
+          </div>
+          <span class="text-xs text-slate-400 font-mono">Total Orders: <strong id="orders-count-label" class="text-slate-800 dark:text-white">2</strong></span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 dark:bg-obsidian-900/90 text-slate-400 border-b border-slate-200 dark:border-slate-700 text-[10px] font-mono uppercase tracking-wider">
+                <th class="py-3 px-4">Order ID</th>
+                <th class="py-3 px-4">Customer</th>
+                <th class="py-3 px-4">Document &amp; Layout</th>
+                <th class="py-3 px-4">Cloud Status</th>
+                <th class="py-3 px-4">Amount</th>
+                <th class="py-3 px-4">Delivery Address</th>
+                <th class="py-3 px-4">Stage</th>
+                <th class="py-3 px-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="admin-orders-tbody" class="divide-y divide-slate-100 dark:divide-slate-700/60"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ================= MODALS ================= -->
+  <!-- MODAL 1: PIN AUTHENTICATION -->
+  <div id="staff-auth-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-obsidian-800 rounded-3xl max-w-sm w-full shadow-2xl border border-indigo-500/30 overflow-hidden">
+      <div class="bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 p-5 text-white flex items-center justify-between border-b border-indigo-500/20">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-shield-halved text-cyan-400"></i>
+          <h3 class="font-extrabold text-sm">Staff Authentication</h3>
+        </div>
+        <button onclick="closeStaffAuthModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="p-6 space-y-5">
+        <p class="text-xs text-slate-500 dark:text-slate-400 text-center">
+          Authorized personnel only. Enter your confidential 4-digit terminal access code.
+        </p>
+
+        <div>
+          <label class="block text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2 text-center">Security Access PIN</label>
+          <input type="password" id="staff-pin-input" maxlength="12" inputmode="numeric" autocomplete="off" placeholder="Staff PIN" onkeydown="if(event.key==='Enter') verifyStaffPin()" class="w-full py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-obsidian-900 text-center font-mono text-2xl tracking-[0.6em] font-extrabold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <div id="pin-lockout-msg" class="hidden mt-2 text-center text-[11px] font-bold text-rose-500"></div>
+        </div>
+
+        <button id="btn-verify-pin" onclick="verifyStaffPin()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-extrabold text-xs uppercase tracking-wider shadow-neon-indigo transition-all active:scale-[0.99]">
+          Verify &amp; Unlock Console
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: UPI CHECKOUT & QR CODE -->
+  <div id="payment-modal" class="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-obsidian-800 rounded-3xl max-w-sm w-full shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div class="bg-slate-950 p-4 text-white flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          <h3 class="font-bold text-xs">Payment &amp; Checkout</h3>
+        </div>
+        <button onclick="closePaymentModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="p-5 text-center space-y-4">
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Amount to Pay</span>
+          <div class="text-3xl font-extrabold font-mono text-slate-900 dark:text-white">₹<span id="modal-pay-amount">25.20</span></div>
+          <div class="flex items-center justify-center gap-1.5 mt-1">
+            <span class="text-[10px] font-mono text-slate-400">Order Reference:</span>
+            <span class="text-[10px] font-mono font-bold text-indigo-600 dark:text-cyan-400" id="modal-order-id-label">PF-0000</span>
+          </div>
+        </div>
+
+        <!-- Payment Method Tabs: Razorpay (Automated) vs Direct Shop UPI (0% Fee) -->
+        <div class="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-obsidian-900 border border-slate-200 dark:border-slate-700 text-xs font-bold">
+          <button type="button" id="tab-pay-razorpay" onclick="switchPaymentMethodTab('razorpay')" class="py-2 px-2.5 rounded-lg bg-indigo-600 text-white shadow-sm transition-all flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-bolt text-amber-300 text-[10px]"></i>
+            <span>Razorpay (Auto)</span>
+          </button>
+          <button type="button" id="tab-pay-direct-upi" onclick="switchPaymentMethodTab('upi')" class="py-2 px-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-500 transition-all flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-qrcode text-[10px]"></i>
+            <span>Direct UPI (0%)</span>
+          </button>
+        </div>
+
+        <!-- TAB 1: RAZORPAY AUTOMATED GATEWAY -->
+        <div id="pane-pay-razorpay" class="space-y-3">
+          <div class="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-left">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="w-5 h-5 rounded-md bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold"><i class="fa-solid fa-check"></i></span>
+              <span class="text-xs font-extrabold text-slate-900 dark:text-white">Instant Automated Verification</span>
+            </div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+              Pay via GPay, PhonePe, Paytm, Cards, or NetBanking. Order verification occurs immediately with zero wait time.
+            </p>
+          </div>
+
+          <button id="btn-launch-razorpay" onclick="launchRazorpayGatewayCheckout()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-extrabold text-xs uppercase tracking-wider shadow-neon-indigo transition-all active:scale-[0.99] flex items-center justify-center gap-2">
+            <i class="fa-solid fa-credit-card text-sm"></i>
+            <span>Pay with Razorpay</span>
+          </button>
+        </div>
+
+        <!-- TAB 2: DIRECT UPI QR SCAN -->
+        <div id="pane-pay-direct-upi" class="hidden space-y-3.5">
+          <!-- Dynamic QR Code Card -->
+          <div class="p-3 bg-white rounded-2xl border border-slate-200 inline-block shadow-md relative group">
+            <img id="upi-qr-image" src="" alt="UPI QR" class="w-40 h-40 mx-auto rounded">
+            <div class="mt-2 text-[9px] font-mono font-semibold text-slate-500 bg-slate-100 rounded py-1 px-1.5 truncate max-w-[170px]" id="modal-vpa-display"></div>
+          </div>
+
+          <!-- Quick Launch UPI App (Mobile Only) -->
+          <div>
+            <a id="btn-upi-app-intent" href="#" class="w-full py-2 px-3 rounded-xl bg-slate-100 dark:bg-obsidian-900 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2 transition-all">
+              <i class="fa-solid fa-mobile-screen-button text-indigo-500"></i>
+              <span>Pay directly via UPI App</span>
+            </a>
+          </div>
+
+          <!-- Mandatory UTR / Reference Input -->
+          <div class="text-left bg-amber-500/10 border border-amber-500/30 p-3 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label class="block text-[11px] font-extrabold text-amber-700 dark:text-amber-300">
+                Enter 12-Digit Bank UTR / Ref No. <span class="text-rose-500">*</span>
+              </label>
+              <span class="text-[9px] font-mono text-amber-600 dark:text-amber-400 font-bold">Mandatory</span>
+            </div>
+            <input type="text" id="utr-input" maxlength="12" oninput="validateUtrInput(this.value)" placeholder="e.g. 631094827105" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-obsidian-900 text-xs font-mono font-bold text-center tracking-widest text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
+              Found in your UPI app receipt as <strong>UPI Ref No.</strong> or <strong>UTR</strong>.
+            </p>
+            <div id="utr-validation-warning" class="hidden text-[10px] font-bold text-rose-500">
+              ⚠ Please enter exactly 12 numeric digits from your bank receipt.
+            </div>
+          </div>
+
+          <button id="btn-confirm-pay" onclick="submitOrderWithUtrVerification()" class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-extrabold text-xs shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-2">
+            <i class="fa-solid fa-shield-check"></i>
+            <span>Submit Direct UPI Order</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: ORDER RECEIPT -->
+  <div id="receipt-modal" class="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-obsidian-800 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 text-center">
+      <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center mx-auto text-xl mb-3">
+        <i class="fa-solid fa-check"></i>
+      </div>
+      <h3 class="text-lg font-extrabold text-slate-900 dark:text-white">Print Job Dispatched!</h3>
+      <div class="my-4 p-4 rounded-2xl bg-slate-50 dark:bg-obsidian-900 border border-slate-200/80 dark:border-slate-700 text-left space-y-2 text-xs">
+        <div class="flex justify-between"><span class="text-slate-400">Order ID:</span><span class="font-mono font-bold text-indigo-600 dark:text-cyan-400" id="receipt-order-id">PF-8419</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Customer:</span><span class="font-bold text-slate-800 dark:text-white" id="receipt-customer">Manish K.</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">Amount Paid:</span><span class="font-mono font-bold text-emerald-500">₹<span id="receipt-amount">67.20</span></span></div>
+      </div>
+      <button onclick="trackNewlyCreatedOrder()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-xs transition-all">
+        Live Order Tracker
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: REJECT PAYMENT WITH EXPLICIT REASON (REPLACES BROWSER PROMPT) -->
+  <div id="reject-order-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-obsidian-800 rounded-3xl max-w-sm w-full shadow-2xl border border-rose-500/30 overflow-hidden">
+      <div class="bg-slate-950 p-4 text-white flex items-center justify-between border-b border-rose-500/20">
+        <h3 class="font-bold text-xs text-rose-400 flex items-center gap-2">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>Reject Order Payment (<span id="modal-reject-order-id"></span>)</span>
+        </h3>
+        <button onclick="closeRejectOrderModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="p-5 space-y-4 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Select Rejection Reason:</label>
+          <div class="space-y-1.5">
+            <button type="button" onclick="selectQuickRejectReason('UTR not found in shop bank account statement.')" class="w-full text-left p-2 rounded-lg bg-slate-100 dark:bg-obsidian-900 hover:bg-rose-500/10 text-slate-700 dark:text-slate-300 text-[11px] font-medium transition-colors">
+              • UTR not found in shop bank statement
+            </button>
+            <button type="button" onclick="selectQuickRejectReason('Amount mismatch (paid amount is less than total).')" class="w-full text-left p-2 rounded-lg bg-slate-100 dark:bg-obsidian-900 hover:bg-rose-500/10 text-slate-700 dark:text-slate-300 text-[11px] font-medium transition-colors">
+              • Amount mismatch (paid less than bill)
+            </button>
+            <button type="button" onclick="selectQuickRejectReason('Payment was cancelled or reversed by your bank.')" class="w-full text-left p-2 rounded-lg bg-slate-100 dark:bg-obsidian-900 hover:bg-rose-500/10 text-slate-700 dark:text-slate-300 text-[11px] font-medium transition-colors">
+              • Payment cancelled / reversed by bank
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Custom Note for Customer:</label>
+          <textarea id="reject-reason-input" rows="2" class="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-900 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500">UTR not found in shop bank statement. Please check your UPI app and re-submit the genuine 12-digit reference number.</textarea>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+          <button type="button" onclick="closeRejectOrderModal()" class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-obsidian-900 text-slate-600 dark:text-slate-300 font-bold">Cancel</button>
+          <button type="button" onclick="confirmRejectOrderPayment()" class="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-extrabold shadow-sm">Reject Order</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: OWNER CONTROL CENTER (BRANDING, UPI, PINS & RATES) -->
+  <div id="price-modal" class="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-obsidian-800 rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[90vh] flex flex-col">
+      <div class="bg-slate-950 p-4 text-white flex items-center justify-between shrink-0">
+        <h3 class="font-bold text-xs flex items-center gap-2"><i class="fa-solid fa-sliders text-cyan-400"></i> Shop Settings — Name, UPI &amp; Prices</h3>
+        <button onclick="closePriceModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-5 space-y-5 text-xs overflow-y-auto">
+        
+        <!-- Shop Branding & UPI Configuration -->
+        <div class="p-3.5 rounded-2xl bg-indigo-500/5 border border-indigo-500/20 space-y-3">
+          <div class="text-[10px] font-mono uppercase tracking-wider text-indigo-600 dark:text-cyan-400 font-extrabold">1. Shop &amp; Payment<//div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-slate-600 dark:text-slate-300 mb-1">Shop Brand Name</label>
+              <input type="text" id="cfg-shop-name" placeholder="PrintFlow" class="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-obsidian-900 font-bold text-slate-900 dark:text-white">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 dark:text-slate-300 mb-1">Merchant UPI ID (VPA)</label>
+              <input type="text" id="cfg-upi-id" placeholder="yourshop@okbank" class="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-obsidian-900 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+            </div>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-[11px] text-slate-600 dark:text-slate-300">
+          <i class="fa-solid fa-key text-amber-500 mr-1"></i>
+          Staff PINs and the Razorpay keys are set on the server in <code class="font-mono">backend/.env</code>, so they can't be read from this page.
+        </div>
+
+        <!-- Print & Delivery Tariffs -->
+        <div class="p-3.5 rounded-2xl bg-slate-100 dark:bg-obsidian-900 border border-slate-200 dark:border-slate-700 space-y-3">
+          <div class="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-extrabold">2. Prices<//div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <label class="block font-bold mb-1">B&amp;W 1-Side (₹)</label>
+              <input type="number" step="0.25" id="cfg-bw" class="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-obsidian-800 font-mono font-bold text-slate-900 dark:text-white">
+            </div>
+            <div>
+              <label class="block font-bold mb-1">B&amp;W Duplex (₹)</label>
+              <input type="number" step="0.25" id="cfg-bw-duplex" class="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-obsidian-800 font-mono font-bold text-slate-900 dark:text-white">
+            </div>
+            <div>
+              <label class="block font-bold mb-1">Colour 1-Side (₹)</label>
+              <input type="number" step="0.5" id="cfg-color" class="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-obsidian-800 font-mono font-bold text-slate-900 dark:text-white">
+            </div>
+            <div>
+              <label class="block font-bold mb-1">Colour Duplex (₹)</label>
+              <input type="number" step="0.5" id="cfg-color-duplex" class="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-obsidian-800 font-mono font-bold text-slate-900 dark:text-white">
+            </div>
+            <div>
+              <label class="block font-bold mb-1">Spiral Book (₹)</label>
+              <input type="number" step="1" id="cfg-spiral" class="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-obsidian-800 font-mono font-bold text-slate-900 dark:text-white">
+            </div>
+            <div>
+              <label class="block font-bold mb-1">Staple (₹)</label>
+              <input type="number" step="1" id="cfg-staple" class="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-obsidian-800 font-mono font-bold text-slate-900 dark:text-white">
+            </div>
+            <div>
+              <label class="block font-bold mb-1">Twin Wiro (₹)</label>
+              <input type="number" step="1" id="cfg-wiro" class="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-obsidian-800 font-mono font-bold text-slate-900 dark:text-white">
+            </div>
+            <div>
+              <label class="block font-bold mb-1">Hardcover (₹)</label>
+              <input type="number" step="1" id="cfg-hard" class="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-obsidian-800 font-mono font-bold text-slate-900 dark:text-white">
+            </div>
+            <div>
+              <label class="block font-bold mb-1">Courier Fee (₹)</label>
+              <input type="number" step="1" id="cfg-delivery" class="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-obsidian-800 font-mono font-bold text-slate-900 dark:text-white">
+            </div>
+            <div class="col-span-2">
+              <label class="block font-bold mb-1">Free Delivery Minimum (₹)</label>
+              <input type="number" step="10" id="cfg-free-threshold" class="w-full p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-obsidian-800 font-mono font-bold text-slate-900 dark:text-white">
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-700 shrink-0">
+          <button type="button" onclick="closePriceModal()" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-obsidian-900 text-slate-600 dark:text-slate-300 font-bold">Cancel</button>
+          <button type="button" id="btn-save-settings" onclick="savePriceConfig()" class="px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 text-white font-extrabold shadow-sm">Save All Settings</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: AREA / LANDMARK SEARCH PICKER -->
+  <div id="area-search-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-obsidian-800 rounded-3xl max-w-md w-full shadow-2xl border border-indigo-500/30 overflow-hidden">
+      <div class="bg-slate-950 p-4 text-white flex items-center justify-between">
+        <h3 class="font-bold text-xs flex items-center gap-2"><i class="fa-solid fa-map-location-dot text-cyan-400"></i> Pick / Search Your Area</h3>
+        <button onclick="closeManualAreaPicker()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-5 space-y-4 text-xs">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">Search Colony, Road or Landmark in Your City</label>
+          <div class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400"></i>
+            <input type="text" id="area-search-query" onkeydown="if(event.key==='Enter') executeAreaSearch()" placeholder="e.g. Madhapur, Hitec City, Jubilee Hills..." class="w-full pl-9 pr-24 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-900 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <button onclick="executeAreaSearch()" class="absolute right-1.5 top-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-[11px]">Search</button>
+          </div>
+        </div>
+
+        <div>
+          <span class="text-[10px] font-mono uppercase text-slate-400 block mb-1.5">Popular Delivery Hubs:</span>
+          <div class="flex flex-wrap gap-1.5">
+            <button onclick="selectQuickArea('Madhapur, Hitec City', 'Near Cyber Towers', 'Hyderabad', '500081')" class="px-2 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-cyan-400 font-medium text-[11px]">Madhapur (500081)</button>
+            <button onclick="selectQuickArea('Banjara Hills, Road No 12', 'Near Care Hospital', 'Hyderabad', '500034')" class="px-2 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-cyan-400 font-medium text-[11px]">Banjara Hills (500034)</button>
+            <button onclick="selectQuickArea('Gachibowli, Financial Dist', 'Near Wipro Circle', 'Hyderabad', '500032')" class="px-2 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-cyan-400 font-medium text-[11px]">Gachibowli (500032)</button>
+            <button onclick="selectQuickArea('Kondapur, Botanical Garden Rd', 'Near Heritage Supermarket', 'Hyderabad', '500084')" class="px-2 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-cyan-400 font-medium text-[11px]">Kondapur (500084)</button>
+            <button onclick="selectQuickArea('Ameerpet, Main Road', 'Near Metro Station', 'Hyderabad', '500016')" class="px-2 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-cyan-400 font-medium text-[11px]">Ameerpet (500016)</button>
+          </div>
+        </div>
+
+        <div id="area-search-results" class="space-y-1.5 max-h-40 overflow-y-auto pt-1 border-t border-slate-100 dark:border-slate-700"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="border-t border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-obsidian-950/80 backdrop-blur py-5 text-[11px] text-slate-400 mt-12 select-none">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center justify-center gap-1">
+      <p>
+        <span id="footer-shop-name">PrintFlow</span> • Print &amp; doorstep delivery • Uploaded files are deleted after printing
+      </p>
+      <!-- Discreet Secret Access: Tap 4 times or press Ctrl+Shift+S -->
+      <p id="secret-staff-tap" onclick="handleSecretStaffTap()" class="text-[10px] text-slate-500 dark:text-slate-500 cursor-default hover:text-slate-400 transition-colors">
+        © 2026 All rights reserved.
+      </p>
+    </div>
+  </footer>
+
+  <!-- Backend address for separately hosted sites (see config.js) -->
+  <script src="config.js"></script>
+  <!-- ================= APPLICATION JAVASCRIPT ================= -->
+  <script>
+    // =====================================================================
+    // CONFIG & API CLIENT
+    // The browser never talks to the database: every read/write goes through
+    // the FastAPI backend, which checks prices, payments and staff PINs.
+    // Normally the backend serves this page, so the API is on the same address.
+    // Only the local preview on :5500 needs a separate backend URL
+    // (localhost:8000, or the owner's "Backend server URL" box).
+    // =====================================================================
+    const SERVED_BY_BACKEND = location.protocol.startsWith('http') && location.port !== '5500';
+    let BACKEND_API_URL = (window.PRINTFLOW_API_URL
+      || (SERVED_BY_BACKEND ? location.origin : (localStorage.getItem("pf_backend_url") || "http://localhost:8000"))).replace(/\/+$/, "");
+    const STAFF_POLL_MS = 15000;
+    const TRACK_STAGES = ['Order Received', 'Printing in Progress', 'Binding & QC', 'Out for Delivery', 'Delivered'];
+    const PAID_STAGES = TRACK_STAGES;
+    const UTR_PENDING_STATUS = 'Awaiting UTR Verification';
+    const AWAITING_PAYMENT_STATUS = 'Awaiting Payment';
+    const BINDING_LABELS = { NONE: 'Loose Sheets', STAPLE: 'Corner Staple', SPIRAL: 'Soft Spiral', WIRO: 'Twin Wiro', HARD: 'Hardcover' };
+
+    let pendingRejectOrderId = null;
+    let secretTapCount = 0;
+    let secretTapTimeout = null;
+    let staffPollTimer = null;
+
+    async function api(path, { method = 'GET', body, pin } = {}) {
+      const headers = {};
+      if (body !== undefined) headers['Content-Type'] = 'application/json';
+      if (pin) headers['X-Staff-Pin'] = pin;
+      let res;
+      try {
+        res = await fetch(`${BACKEND_API_URL}${path}`, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined });
+      } catch (e) {
+        const err = new Error('Cannot reach the PrintFlow server. Please try again in a moment.');
+        err.status = 0;
+        throw err;
+      }
+      let data = null;
+      try { data = await res.json(); } catch (e) {}
+      if (!res.ok) {
+        let msg = data && data.detail;
+        if (Array.isArray(msg)) {
+          msg = msg.map(d => `${(d.loc || []).slice(-1)[0] || 'field'}: ${String(d.msg || '').replace(/^Value error, /, '')}`).join('; ');
+        }
+        const err = new Error(msg || `Request failed (${res.status})`);
+        err.status = res.status;
+        throw err;
+      }
+      return data;
+    }
+
+    // Central application state
+    const appState = {
+      theme: 'dark',
+      audioEnabled: true,
+      staffRole: null,
+      staffPin: null,
+      backendOnline: false,
+      razorpayEnabled: false,
+      pageRangeMode: 'all',
+      pageRangeSpec: 'All',
+      rangeError: null,
+      activeParsedPages: 0,
+      shopName: 'PrintFlow',
+      upiId: '',
+      rates: {
+        bwPage: 2.00, bwDuplex: 1.50, colorPage: 8.00, colorDuplex: 7.00,
+        stapleBinding: 5.00, spiralBinding: 45.00, wiroBinding: 75.00, hardBinding: 220.00,
+        deliveryFee: 40.00, freeDeliveryThreshold: 499.00
+      },
+      fileQueue: [],
+      currentCalculatedTotal: 0,
+      checkout: null,          // { orderId, amount, razorpayOrderId, razorpayKeyId, phone }
+      trackedOrder: null,      // { id, phone }
+      orders: []
+    };
+
+    // Listen for Ctrl+Shift+S or Cmd+Shift+S to open the staff login
+    window.addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'S' || e.key === 's')) {
+        e.preventDefault();
+        requestAdminAccess();
+      }
+    });
+
+    // =====================================================================
+    // GENERAL UI
+    // =====================================================================
+    function switchView(viewName) {
+      if (viewName === 'admin' && !appState.staffRole) viewName = 'order';
+      ['order', 'track', 'rates', 'admin'].forEach(v => {
+        document.getElementById(`view-${v}`)?.classList.add('hidden');
+        const btn = document.getElementById(`nav-${v}`);
+        if (btn && v !== 'admin') {
+          btn.className = "nav-btn px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white transition-all flex items-center gap-2";
+        }
+        const mbtn = document.getElementById(`mnav-${v}`);
+        if (mbtn) mbtn.className = "mnav-btn py-2.5 text-slate-500 dark:text-slate-400 border-b-2 border-transparent flex flex-col items-center gap-0.5";
+      });
+
+      document.getElementById(`view-${viewName}`)?.classList.remove('hidden');
+      const activeBtn = document.getElementById(`nav-${viewName}`);
+      if (activeBtn && viewName !== 'admin') {
+        activeBtn.className = "nav-btn px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-violet-600 shadow-md transition-all flex items-center gap-2";
+      }
+      const activeMobile = document.getElementById(`mnav-${viewName}`);
+      if (activeMobile) activeMobile.className = "mnav-btn py-2.5 text-indigo-600 dark:text-cyan-400 border-b-2 border-indigo-600 dark:border-cyan-400 flex flex-col items-center gap-0.5";
+
+      if (viewName === 'admin') startStaffPolling(); else stopStaffPolling();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const toast = document.createElement('div');
+      const styles = {
+        success: 'bg-slate-950 text-white border-l-4 border-emerald-400',
+        purge: 'bg-slate-950 text-white border-l-4 border-rose-500',
+        error: 'bg-rose-600 text-white',
+        info: 'bg-slate-950 text-white border-l-4 border-cyan-400'
+      };
+      toast.className = `${styles[type] || styles.info} p-3.5 rounded-xl shadow-2xl text-xs font-semibold flex items-center justify-between gap-3 pointer-events-auto transition-all duration-300 border border-slate-800`;
+      const row = document.createElement('div');
+      row.className = 'flex items-center gap-2.5';
+      row.innerHTML = '<i class="fa-solid fa-bolt text-cyan-400"></i>';
+      const text = document.createElement('span');
+      text.textContent = message;  // never HTML: messages can contain server/user text
+      row.appendChild(text);
+      toast.appendChild(row);
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, type === 'error' ? 6000 : 3800);
+    }
+
+    function setServiceStatus(state, text) {
+      const pill = document.getElementById('service-status-pill');
+      const dot = document.getElementById('service-status-dot');
+      const label = document.getElementById('service-status-text');
+      const tones = {
+        ok: ['bg-emerald-500/15 text-emerald-400 border-emerald-500/30', 'bg-emerald-400'],
+        warn: ['bg-amber-500/15 text-amber-400 border-amber-500/30', 'bg-amber-400'],
+        error: ['bg-rose-500/15 text-rose-400 border-rose-500/30', 'bg-rose-400'],
+        idle: ['bg-slate-500/15 text-slate-300 border-slate-500/30', 'bg-slate-400']
+      }[state] || [];
+      if (pill) pill.className = `inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold border ${tones[0]}`;
+      if (dot) dot.className = `w-1.5 h-1.5 rounded-full ${tones[1]}`;
+      if (label) label.textContent = text;
+    }
+
+        function toggleTheme() {
+      const htmlEl = document.documentElement;
+      const iconEl = document.getElementById('theme-toggle-icon');
+      if (htmlEl.classList.contains('dark')) {
+        htmlEl.classList.remove('dark');
+        appState.theme = 'light';
+        if (iconEl) iconEl.className = 'fa-solid fa-moon text-indigo-600 text-sm';
+      } else {
+        htmlEl.classList.add('dark');
+        appState.theme = 'dark';
+        if (iconEl) iconEl.className = 'fa-solid fa-sun text-amber-400 text-sm';
+      }
+    }
+
+    function playOrderChime() {
+      if (!appState.audioEnabled) return;
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = ctx.currentTime;
+        [659.25, 987.77].forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.14);
+          gain.gain.setValueAtTime(0.18, now + idx * 0.14);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.14 + 0.65);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + idx * 0.14);
+          osc.stop(now + idx * 0.14 + 0.7);
+        });
+      } catch (e) {}
+    }
+
+    function toggleAudioChime() {
+      appState.audioEnabled = !appState.audioEnabled;
+      const icon = document.getElementById('chime-icon');
+      const label = document.getElementById('chime-label');
+      if (appState.audioEnabled) {
+        if (icon) icon.className = "fa-solid fa-volume-high text-emerald-400";
+        if (label) label.textContent = "Chime: ON";
+      } else {
+        if (icon) icon.className = "fa-solid fa-volume-xmark text-slate-400";
+        if (label) label.textContent = "Chime: MUTED";
+      }
+    }
+
+    function switchPaymentMethodTab(tab) {
+      const tabRazorpay = document.getElementById('tab-pay-razorpay');
+      const tabDirectUpi = document.getElementById('tab-pay-direct-upi');
+      const paneRazorpay = document.getElementById('pane-pay-razorpay');
+      const paneDirectUpi = document.getElementById('pane-pay-direct-upi');
+
+      if (tab === 'razorpay') {
+        if (tabRazorpay) {
+          tabRazorpay.className = "py-2 px-2.5 rounded-lg bg-indigo-600 text-white shadow-sm transition-all flex items-center justify-center gap-1.5";
+        }
+        if (tabDirectUpi) {
+          tabDirectUpi.className = "py-2 px-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-500 transition-all flex items-center justify-center gap-1.5";
+        }
+        if (paneRazorpay) paneRazorpay.classList.remove('hidden');
+        if (paneDirectUpi) paneDirectUpi.classList.add('hidden');
+      } else {
+        if (tabDirectUpi) {
+          tabDirectUpi.className = "py-2 px-2.5 rounded-lg bg-indigo-600 text-white shadow-sm transition-all flex items-center justify-center gap-1.5";
+        }
+        if (tabRazorpay) {
+          tabRazorpay.className = "py-2 px-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-500 transition-all flex items-center justify-center gap-1.5";
+        }
+        if (paneDirectUpi) paneDirectUpi.classList.remove('hidden');
+        if (paneRazorpay) paneRazorpay.classList.add('hidden');
+      }
+    }
+
+    function handleSecretStaffTap() {
+      secretTapCount++;
+      clearTimeout(secretTapTimeout);
+      if (secretTapCount >= 4) {
+        secretTapCount = 0;
+        requestAdminAccess();
+      } else {
+        secretTapTimeout = setTimeout(() => {
+          secretTapCount = 0;
+        }, 1200);
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function getCheckedValue(name, fallback) {
+      const el = document.querySelector(`input[name="${name}"]:checked`);
+      return el ? el.value : fallback;
+    }
+
+    function getRawTotalPages() {
+      return appState.fileQueue.reduce((acc, f) => acc + (Number(f.pages) || 0), 0);
+    }
+
+    // Parses "1, 3-5, 9-12" against a page count. Returns { pages: [...], error }
+    function parsePageRange(spec, totalPages) {
+      const text = String(spec || '').trim();
+      if (!text) return { pages: [], error: 'Enter a page range, e.g. 3-5 or 1, 3-5' };
+      const pages = new Set();
+      for (const rawPart of text.split(',')) {
+        const part = rawPart.trim();
+        if (!part) continue;
+        const m = part.match(/^(\d+)\s*(?:-\s*(\d+))?$/);
+        if (!m) return { pages: [], error: `"${part}" is not a valid page or range` };
+        const start = parseInt(m[1], 10);
+        const end = m[2] ? parseInt(m[2], 10) : start;
+        if (start < 1 || end < start) return { pages: [], error: `"${part}" is not a valid range` };
+        if (end > totalPages) return { pages: [], error: `Page ${end} exceeds the ${totalPages} pages in your documents` };
+        for (let p = start; p <= end; p++) pages.add(p);
+      }
+      if (pages.size === 0) return { pages: [], error: 'Enter a page range, e.g. 3-5 or 1, 3-5' };
+      return { pages: [...pages].sort((a, b) => a - b), error: null };
+    }
+
+    // Modal for Area Search Picker
+    function openManualAreaPicker() {
+      const modal = document.getElementById('area-search-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+          const input = document.getElementById('area-search-query');
+          if (input) input.focus();
+        }, 100);
+      }
+    }
+
+    function closeManualAreaPicker() {
+      const modal = document.getElementById('area-search-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function selectQuickArea(street, landmark, city, pincode) {
+      const streetEl = document.getElementById('cust-street');
+      const landmarkEl = document.getElementById('cust-landmark');
+      const cityEl = document.getElementById('cust-city');
+      const pincodeEl = document.getElementById('cust-pincode');
+      const accuracyBadge = document.getElementById('gps-accuracy-badge');
+
+      if (streetEl) streetEl.value = street;
+      if (landmarkEl) landmarkEl.value = landmark;
+      if (cityEl) cityEl.value = city;
+      if (pincodeEl) pincodeEl.value = pincode;
+
+      if (accuracyBadge) {
+        accuracyBadge.classList.remove('hidden');
+        accuracyBadge.textContent = "Area Selected";
+        accuracyBadge.className = "text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-600 dark:text-cyan-400 border border-indigo-500/30";
+      }
+
+      closeManualAreaPicker();
+      showToast(`Selected ${street} (${pincode}). Please add your flat/house #.`, "success");
+    }
+
+    async function executeAreaSearch() {
+      const q = document.getElementById('area-search-query').value.trim();
+      const resultsContainer = document.getElementById('area-search-results');
+      if (!q || !resultsContainer) return;
+
+      resultsContainer.innerHTML = `<div class="p-3 text-center text-slate-400"><i class="fa-solid fa-circle-notch fa-spin text-xs"></i> Searching locations...</div>`;
+
+      try {
+        const cityDefault = document.getElementById('cust-city')?.value || 'Hyderabad';
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q + ' ' + cityDefault)}&addressdetails=1&limit=5`;
+        const res = await fetch(url);
+        const list = await res.json();
+
+        if (!list || list.length === 0) {
+          resultsContainer.innerHTML = `<div class="p-3 text-center text-slate-400">No match found. Click any popular hub above or type your street.</div>`;
+          return;
+        }
+
+        resultsContainer.innerHTML = list.map(item => {
+          const addr = item.address || {};
+          const street = [addr.road, addr.suburb, addr.neighbourhood].filter(Boolean).join(', ') || item.display_name.split(',')[0];
+          const city = addr.city || addr.town || addr.state_district || cityDefault;
+          const pin = addr.postcode || '';
+          const landmark = `Near ${addr.suburb || addr.neighbourhood || street}`;
+
+          return `
+            <div onclick="selectQuickArea('${street.replace(/'/g, "\\'")}', '${landmark.replace(/'/g, "\\'")}', '${city.replace(/'/g, "\\'")}', '${pin}')" class="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-obsidian-900 cursor-pointer transition-colors">
+              <div class="font-bold text-slate-900 dark:text-white truncate">${item.display_name.split(',').slice(0, 3).join(', ')}</div>
+              <div class="text-[10px] text-slate-400 font-mono">${city} ${pin ? '• PIN: ' + pin : ''}</div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        resultsContainer.innerHTML = `<div class="p-3 text-center text-rose-500">Search service busy. Please select a popular hub above.</div>`;
+      }
+    }
+
+    // Auto-fill City & Landmark when user enters any 6-digit Indian PIN
+    async function handlePincodeAutoLookup(pinVal) {
+      const clean = pinVal.replace(/\D/g, '').slice(0, 6);
+      if (clean.length !== 6) return;
+
+      const spinner = document.getElementById('pin-lookup-spinner');
+      if (spinner) spinner.classList.remove('hidden');
+
+      try {
+        const res = await fetch(`https://api.postalpincode.in/pincode/${clean}`);
+        const data = await res.json();
+        if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice?.length) {
+          const po = data[0].PostOffice[0];
+          const cityEl = document.getElementById('cust-city');
+          const landmarkEl = document.getElementById('cust-landmark');
+          const streetEl = document.getElementById('cust-street');
+
+          if (cityEl) cityEl.value = po.District || po.Division || po.State;
+          if (landmarkEl && (!landmarkEl.value || landmarkEl.value.startsWith('Near'))) {
+            landmarkEl.value = `Near ${po.Name}`;
+          }
+          if (streetEl && !streetEl.value) {
+            streetEl.value = `${po.Name}, ${po.District}`;
+          }
+          showToast(`Pincode ${clean} verified: ${po.Name}, ${po.District}`, "success");
+        }
+      } catch (e) {
+        // Silently continue if public postal API is slow
+      } finally {
+        if (spinner) spinner.classList.add('hidden');
+      }
+    }
+
+    async function autoDetectDeliveryLocation() {
+      const btn = document.getElementById('btn-detect-gps');
+      const icon = document.getElementById('gps-icon');
+      const label = document.getElementById('gps-btn-label');
+      const feedback = document.getElementById('gps-status-feedback');
+      const feedbackText = document.getElementById('gps-status-text');
+      const accuracyBadge = document.getElementById('gps-accuracy-badge');
+
+      if (btn) btn.disabled = true;
+      if (icon) icon.className = "fa-solid fa-circle-notch fa-spin text-amber-300";
+      if (label) label.textContent = "Detecting...";
+      if (feedback) feedback.classList.remove('hidden');
+      if (feedbackText) feedbackText.textContent = "Acquiring coordinates...";
+
+      function applyAddressFields(data, isAccurateGps = false) {
+        const streetEl = document.getElementById('cust-street');
+        const landmarkEl = document.getElementById('cust-landmark');
+        const cityEl = document.getElementById('cust-city');
+        const pincodeEl = document.getElementById('cust-pincode');
+
+        if (streetEl && data.street) {
+          const curVal = streetEl.value.trim();
+          if (curVal && !curVal.includes(data.street)) {
+            streetEl.value = `${curVal}, ${data.street}`;
+          } else {
+            streetEl.value = data.street;
+          }
+        }
+        if (landmarkEl && data.landmark) landmarkEl.value = data.landmark;
+        if (cityEl && data.city) cityEl.value = data.city;
+        if (pincodeEl && data.pincode) {
+          const clean = String(data.pincode).replace(/\D/g, '').slice(0, 6);
+          if (clean) pincodeEl.value = clean;
+        }
+
+        if (accuracyBadge) {
+          accuracyBadge.classList.remove('hidden');
+          accuracyBadge.textContent = isAccurateGps ? `GPS Lock (±${data.accuracy || 15}m)` : "Area Located";
+          accuracyBadge.className = isAccurateGps
+            ? "text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+            : "text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30";
+        }
+
+        if (feedbackText) {
+          feedbackText.textContent = `Located: ${data.city} ${data.pincode ? '(' + data.pincode + ')' : ''}. Please check house/flat number.`;
+        }
+
+        showToast(
+          `Location set to ${data.city} ${data.pincode ? '(' + data.pincode + ')' : ''}. Please add your Flat/House #.`,
+          "success"
+        );
+
+        setTimeout(() => {
+          if (feedback) feedback.classList.add('hidden');
+        }, 4000);
+      }
+
+      // Fast network IP fallback that works in any browser sandbox
+      async function fallbackNetworkLocation() {
+        if (feedbackText) feedbackText.textContent = "Resolving via network location services...";
+
+        const apis = [
+          {
+            url: "https://ipwho.is/",
+            parse: (d) => ({
+              street: `${d.city || 'Hyderabad'} Main Road`,
+              landmark: `Near ${d.city || 'Central City'}`,
+              city: d.city || 'Hyderabad',
+              pincode: d.postal || '500081'
+            })
+          },
+          {
+            url: "https://freeipapi.com/api/json",
+            parse: (d) => ({
+              street: `${d.cityName || 'Hyderabad'} Hub`,
+              landmark: `Near ${d.cityName || 'Central Hub'}`,
+              city: d.cityName || 'Hyderabad',
+              pincode: d.zipCode || '500081'
+            })
+          }
+        ];
+
+        for (const api of apis) {
+          try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 2500);
+            const res = await fetch(api.url, { signal: controller.signal });
+            clearTimeout(timer);
+            if (res.ok) {
+              const data = await res.json();
+              const parsed = api.parse(data);
+              if (parsed.city) {
+                applyAddressFields(parsed, false);
+                return true;
+              }
+            }
+          } catch (e) {
+            continue;
+          }
+        }
+        return false;
+      }
+
+      // Check device GPS with strict timeout
+      let gpsResolved = false;
+
+      if (navigator.geolocation && !isRestrictedEnvironment) {
+        const gpsTimeout = setTimeout(async () => {
+          if (!gpsResolved) {
+            gpsResolved = true;
+            const ok = await fallbackNetworkLocation();
+            if (!ok) {
+              openManualAreaPicker();
+            }
+            resetButton();
+          }
+        }, 2200);
+
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            if (gpsResolved) return;
+            gpsResolved = true;
+            clearTimeout(gpsTimeout);
+
+            const { latitude, longitude, accuracy } = pos.coords;
+            try {
+              const bdcUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`;
+              const res = await fetch(bdcUrl);
+              if (res.ok) {
+                const geo = await res.json();
+                const sub = geo.localityInfo?.administrative?.[3]?.name || geo.localityInfo?.administrative?.[4]?.name || geo.locality || '';
+                const city = geo.city || geo.principalSubdivisionDistrict || 'Hyderabad';
+                const pin = geo.postcode || '';
+
+                applyAddressFields({
+                  street: sub ? `${sub}, Main Road` : `${city} Central`,
+                  landmark: sub ? `Near ${sub}` : `Near ${city}`,
+                  city: city,
+                  pincode: pin,
+                  accuracy: Math.round(accuracy)
+                }, true);
+                resetButton();
+                return;
+              }
+            } catch (e) {}
+
+            applyAddressFields({
+              street: `GPS Pin [${latitude.toFixed(4)}, ${longitude.toFixed(4)}]`,
+              landmark: "Near Current Coordinates",
+              city: "Hyderabad",
+              pincode: "",
+              accuracy: Math.round(accuracy)
+            }, true);
+            resetButton();
+          },
+          async () => {
+            if (gpsResolved) return;
+            gpsResolved = true;
+            clearTimeout(gpsTimeout);
+            const ok = await fallbackNetworkLocation();
+            if (!ok) {
+              openManualAreaPicker();
+            }
+            resetButton();
+          },
+          {
+            enableHighAccuracy: false,
+            timeout: 2000,
+            maximumAge: 60000
+          }
+        );
+      } else {
+        const ok = await fallbackNetworkLocation();
+        if (!ok) {
+          openManualAreaPicker();
+        }
+        resetButton();
+      }
+
+      function resetButton() {
+        if (btn) btn.disabled = false;
+        if (icon) icon.className = "fa-solid fa-location-dot text-amber-300";
+        if (label) label.textContent = "Auto Detect Location";
+      }
+    }
+
+
+    // =====================================================================
+    // SHOP SETTINGS & BACKEND STATUS
+    // =====================================================================
+    function applySettings(s) {
+      if (!s) return;
+      appState.shopName = s.shop_name || 'PrintFlow';
+      appState.upiId = s.upi_id || '';
+      appState.razorpayEnabled = !!s.razorpay_enabled;
+      const r = s.rates || {};
+      appState.rates = {
+        bwPage: Number(r.bw_page ?? appState.rates.bwPage),
+        bwDuplex: Number(r.bw_duplex ?? appState.rates.bwDuplex),
+        colorPage: Number(r.color_page ?? appState.rates.colorPage),
+        colorDuplex: Number(r.color_duplex ?? appState.rates.colorDuplex),
+        stapleBinding: Number(r.staple ?? appState.rates.stapleBinding),
+        spiralBinding: Number(r.spiral ?? appState.rates.spiralBinding),
+        wiroBinding: Number(r.wiro ?? appState.rates.wiroBinding),
+        hardBinding: Number(r.hard ?? appState.rates.hardBinding),
+        deliveryFee: Number(r.delivery_fee ?? appState.rates.deliveryFee),
+        freeDeliveryThreshold: Number(r.free_delivery_threshold ?? appState.rates.freeDeliveryThreshold)
+      };
+      document.title = `${appState.shopName} — Print & Doorstep Delivery`;
+      updateStudioState();
+    }
+
+    async function loadShopSettings() {
+      try {
+        applySettings(await api('/api/settings'));
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    async function checkBackendHealth() {
+      try {
+        await api('/api/health');
+        appState.backendOnline = true;
+        setServiceStatus('ok', 'Online — accepting orders');
+      } catch (e) {
+        appState.backendOnline = false;
+        setServiceStatus(e.status === 503 ? 'warn' : 'error', e.status === 503 ? 'File storage unavailable' : 'Offline — orders paused');
+      }
+      return appState.backendOnline;
+    }
+
+    async function saveBackendApiUrl() {
+      const input = document.getElementById('backend-api-url-input');
+      const val = (input?.value || '').trim().replace(/\/+$/, "");
+      if (!/^https?:\/\/.+/.test(val)) {
+        showToast("Enter a full URL, e.g. http://localhost:8000", "error");
+        return;
+      }
+      BACKEND_API_URL = val;
+      localStorage.setItem("pf_backend_url", BACKEND_API_URL);
+      const ok = await checkBackendHealth();
+      if (ok) await loadShopSettings();
+      showToast(ok ? `Connected to ${BACKEND_API_URL}` : `Saved, but ${BACKEND_API_URL} is not responding`, ok ? "success" : "error");
+    }
+
+    function applyShopBranding() {
+      const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+      setText('header-brand-title', appState.shopName);
+      setText('footer-shop-name', appState.shopName);
+      setText('modal-vpa-display', appState.upiId || 'UPI not configured');
+
+      const amount = Number(appState.checkout?.amount ?? appState.currentCalculatedTotal ?? 0).toFixed(2);
+      const note = appState.checkout?.orderId || appState.shopName;
+      const upiUrl = `upi://pay?pa=${encodeURIComponent(appState.upiId)}&pn=${encodeURIComponent(appState.shopName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
+      const upiQr = document.getElementById('upi-qr-image');
+      const upiIntent = document.getElementById('btn-upi-app-intent');
+      if (upiQr) {
+        if (appState.upiId) {
+          upiQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=170x170&data=${encodeURIComponent(upiUrl)}`;
+          upiQr.classList.remove('hidden');
+        } else {
+          upiQr.classList.add('hidden');
+        }
+      }
+      if (upiIntent) upiIntent.href = appState.upiId ? upiUrl : '#';
+    }
+
+    // =====================================================================
+    // ORDER FORM: FILES, PAGE RANGE, PRICE & PREVIEW
+    // =====================================================================
+        function renderFileQueue() {
+      const list = document.getElementById('file-queue-list');
+      const count = document.getElementById('queue-count');
+      if (count) count.textContent = appState.fileQueue.length;
+      if (!list) return;
+      if (appState.fileQueue.length === 0) {
+        list.innerHTML = `<div class="p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-center text-[11px] text-slate-400">No documents yet. Drop a PDF, Word file or photo above to begin.</div>`;
+        return;
+      }
+      list.innerHTML = appState.fileQueue.map(f => {
+        const icon = f.type === 'img' ? 'fa-image text-violet-500' : f.type === 'doc' ? 'fa-file-word text-sky-500' : 'fa-file-pdf text-rose-500';
+        const storage = f.r2FileKey ? `<span class="text-emerald-500">Uploaded ✓</span>` : `<span class="text-amber-500">Not uploaded</span>`;
+        return `
+          <div class="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-slate-50 dark:bg-obsidian-900/70 border border-slate-200 dark:border-slate-700 text-xs">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <i class="fa-solid ${icon}"></i>
+              <div class="min-w-0">
+                <div class="font-bold text-slate-900 dark:text-white truncate">${escapeHtml(f.name)}</div>
+                <div class="text-[10px] font-mono text-slate-400">${f.pages} page${f.pages === 1 ? '' : 's'} • ${Number(f.sizeMB).toFixed(2)} MB • ${storage}</div>
+              </div>
+            </div>
+            <button type="button" onclick="removeQueuedFile('${f.id}')" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10" title="Remove"><i class="fa-solid fa-trash-can"></i></button>
+          </div>`;
+      }).join('');
+    }
+
+    function removeQueuedFile(fileId) {
+      appState.fileQueue = appState.fileQueue.filter(f => f.id !== fileId);
+      updateStudioState();
+    }
+
+    function setUploadProgress(visible, text, pct) {
+      const wrap = document.getElementById('upload-progress-wrap');
+      const status = document.getElementById('upload-status-text');
+      const pctText = document.getElementById('upload-pct-text');
+      const bar = document.getElementById('upload-bar');
+      if (wrap) wrap.classList.toggle('hidden', !visible);
+      if (status && text) status.innerHTML = text;
+      if (pctText) pctText.textContent = `${Math.round(pct || 0)}%`;
+      if (bar) bar.style.width = `${Math.round(pct || 0)}%`;
+    }
+
+    async function countDocumentPages(file, type) {
+      if (type === 'img') return 1;
+      if (type === 'pdf' && window.pdfjsLib) {
+        const data = new Uint8Array(await file.arrayBuffer());
+        const pdf = await window.pdfjsLib.getDocument({ data }).promise;
+        const n = pdf.numPages;
+        pdf.destroy();
+        return n;
+      }
+      return 1;
+    }
+
+    function setPageRangeMode(mode) {
+      appState.pageRangeMode = mode === 'custom' ? 'custom' : 'all';
+      const btnAll = document.getElementById('btn-range-all');
+      const btnCustom = document.getElementById('btn-range-custom');
+      const box = document.getElementById('custom-range-box');
+      const active = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white transition-all';
+      const inactive = 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-500 transition-all';
+      if (btnAll) btnAll.className = appState.pageRangeMode === 'all' ? active : inactive;
+      if (btnCustom) btnCustom.className = appState.pageRangeMode === 'custom' ? active : inactive;
+      if (box) box.classList.toggle('hidden', appState.pageRangeMode !== 'custom');
+      updateStudioState();
+    }
+
+    function applyQuickRange(spec) {
+      const input = document.getElementById('custom-range-input');
+      if (input) input.value = spec;
+      setPageRangeMode('custom');
+    }
+
+    function adjustCopies(delta) {
+      const input = document.getElementById('copy-count');
+      if (!input) return;
+      const current = parseInt(input.value, 10) || 1;
+      input.value = Math.min(999, Math.max(1, current + delta));
+      updateStudioState();
+    }
+
+    // Single source of truth for price + preview. Called on every studio change.
+    function updateStudioState() {
+      const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+      const rates = appState.rates;
+
+      // Rate labels
+      setText('lbl-rate-bw', rates.bwPage.toFixed(2));
+      setText('lbl-rate-color', rates.colorPage.toFixed(2));
+      setText('lbl-rate-delivery', rates.deliveryFee.toFixed(0));
+      setText('rate-card-bw', rates.bwPage.toFixed(2));
+      setText('rate-card-color', rates.colorPage.toFixed(2));
+      setText('rate-card-spiral', rates.spiralBinding.toFixed(0));
+
+      renderFileQueue();
+
+      // Page selection
+      const rawTotal = getRawTotalPages();
+      setText('lbl-total-raw-pages', rawTotal);
+      const rangeMsg = document.getElementById('range-validation-msg');
+      let activePages = rawTotal;
+      let rangeSpec = rawTotal > 0 ? `1-${rawTotal}` : '-';
+      appState.rangeError = rawTotal === 0 ? 'Add at least one document to print.' : null;
+
+      if (appState.pageRangeMode === 'custom' && rawTotal > 0) {
+        const spec = document.getElementById('custom-range-input')?.value || '';
+        const parsed = parsePageRange(spec, rawTotal);
+        if (parsed.error) {
+          activePages = 0;
+          appState.rangeError = parsed.error;
+          if (rangeMsg) {
+            rangeMsg.className = 'text-[11px] font-mono text-rose-500 mt-2 font-semibold';
+            rangeMsg.textContent = `✗ ${parsed.error}`;
+          }
+        } else {
+          activePages = parsed.pages.length;
+          rangeSpec = spec.replace(/\s+/g, '');
+          if (rangeMsg) {
+            rangeMsg.className = 'text-[11px] font-mono text-emerald-600 dark:text-emerald-400 mt-2 font-semibold';
+            rangeMsg.textContent = `✓ Extracting ${activePages} page${activePages === 1 ? '' : 's'} out of ${rawTotal} total.`;
+          }
+        }
+      }
+      appState.activeParsedPages = activePages;
+      appState.pageRangeSpec = appState.pageRangeMode === 'all' ? 'All' : rangeSpec;
+
+      // Print options
+      const orientation = getCheckedValue('orientation-mode', 'portrait');
+      const nup = parseInt(document.getElementById('nup-layout')?.value, 10) || 1;
+      const isColor = getCheckedValue('color-mode', 'bw') === 'color';
+      const isDuplex = getCheckedValue('duplex-mode', 'single') === 'double';
+      const paperSize = document.getElementById('paper-size')?.value || 'A4';
+      const paperGsm = document.getElementById('paper-gsm')?.value || '75';
+      const binding = getCheckedValue('binding-opt', 'none');
+      const copyInput = document.getElementById('copy-count');
+      const copies = Math.min(999, Math.max(1, parseInt(copyInput?.value, 10) || 1));
+      if (copyInput) copyInput.value = copies;
+
+      // Quantities: N-up packs several pages per printed side; duplex uses both sides of a sheet
+      const sidesPerCopy = Math.ceil(activePages / nup);
+      const sheetsPerCopy = isDuplex ? Math.ceil(sidesPerCopy / 2) : sidesPerCopy;
+      const totalSides = sidesPerCopy * copies;
+      const totalSheets = sheetsPerCopy * copies;
+
+      // Pricing
+      const perSide = isColor
+        ? (isDuplex ? rates.colorDuplex : rates.colorPage)
+        : (isDuplex ? rates.bwDuplex : rates.bwPage);
+      const printCost = totalSides * perSide;
+      const bindingPerCopy = { none: 0, staple: rates.stapleBinding, spiral: rates.spiralBinding, wiro: rates.wiroBinding, hard: rates.hardBinding }[binding] || 0;
+      const bindingCost = activePages > 0 ? bindingPerCopy * copies : 0;
+      const itemsCost = printCost + bindingCost;
+      const deliveryCost = activePages === 0 ? 0 : (itemsCost >= rates.freeDeliveryThreshold ? 0 : rates.deliveryFee);
+      const subtotal = itemsCost + deliveryCost;
+      const gst = +(subtotal * 0.05).toFixed(2);
+      const total = +(subtotal + gst).toFixed(2);
+      appState.currentCalculatedTotal = total;
+
+      setText('calc-total-pages', activePages);
+      setText('calc-copies-inline', copies);
+      setText('calc-layout-desc', `${orientation === 'landscape' ? 'Landscape' : 'Portrait'} • ${nup}-Up`);
+      setText('calc-physical-sheets', `${totalSheets} sheet${totalSheets === 1 ? '' : 's'} (${paperSize})`);
+      setText('calc-print-cost', printCost.toFixed(2));
+      setText('calc-binding-cost', bindingCost.toFixed(2));
+      setText('calc-delivery-cost', deliveryCost === 0 && activePages > 0 ? 'FREE' : `₹${deliveryCost.toFixed(2)}`);
+      setText('calc-gst-cost', gst.toFixed(2));
+      setText('calc-grand-total', total.toFixed(2));
+
+      // Live preview
+      setText('preview-badge-orient', orientation === 'landscape' ? 'Landscape' : 'Portrait');
+      setText('preview-badge-nup', nup === 1 ? '1-Up Full' : `${nup}-Up Grid`);
+      setText('mockup-range-tag', `PG ${appState.pageRangeMode === 'all' ? (rawTotal > 0 ? `1-${rawTotal}` : '-') : rangeSpec}`);
+      setText('mockup-page-indicator', `${paperSize} • ${paperGsm}G`);
+      setText('mockup-color-tag', isColor ? 'FULL COLOUR' : 'MONOCHROME');
+      setText('mockup-duplex-tag', isDuplex ? '2-SIDED' : '1-SIDED');
+      setText('preview-file-title', appState.fileQueue.length > 1
+        ? `${appState.fileQueue[0].name} +${appState.fileQueue.length - 1} more`
+        : (appState.fileQueue[0]?.name || 'No document'));
+      setText('preview-sheets-count', `${totalSheets} Sheet${totalSheets === 1 ? '' : 's'} Required`);
+
+      const sheet = document.getElementById('mockup-sheet');
+      const stack1 = document.getElementById('mockup-stack-1');
+      const stack2 = document.getElementById('mockup-stack-2');
+      const dims = orientation === 'landscape' ? { width: '12rem', height: '9rem' } : { width: '9rem', height: '12rem' };
+      [sheet, stack1, stack2].forEach(el => { if (el) Object.assign(el.style, dims); });
+      if (sheet) {
+        sheet.classList.toggle('doc-bw', !isColor);
+        sheet.classList.toggle('ring-2', isColor);
+        sheet.classList.toggle('ring-cyan-400', isColor);
+      }
+      if (stack1) stack1.classList.toggle('hidden', totalSheets < 2);
+      if (stack2) stack2.classList.toggle('hidden', totalSheets < 3);
+
+      ['hardcover', 'staple', 'spiral', 'wiro'].forEach(b => {
+        const el = document.getElementById(`mockup-${b}`);
+        if (el) el.classList.toggle('hidden', binding !== (b === 'hardcover' ? 'hard' : b));
+      });
+
+      const grid = document.getElementById('mockup-grid-body');
+      if (grid) {
+        const cols = { 1: 1, 2: orientation === 'landscape' ? 2 : 1, 4: 2, 6: orientation === 'landscape' ? 3 : 2, 9: 3, 16: 4 }[nup] || 1;
+        grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+        const palette = ['bg-indigo-200', 'bg-cyan-200', 'bg-violet-200', 'bg-emerald-200', 'bg-amber-200', 'bg-rose-200'];
+        grid.innerHTML = Array.from({ length: nup }, (_, i) => `
+          <div class="rounded-sm border border-slate-200 bg-slate-50 p-0.5 flex flex-col gap-0.5 overflow-hidden">
+            <div class="h-1 w-3/4 rounded ${palette[i % palette.length]}"></div>
+            <div class="h-0.5 w-full rounded bg-slate-200"></div>
+            <div class="h-0.5 w-5/6 rounded bg-slate-200"></div>
+          </div>`).join('');
+      }
+
+      applyShopBranding();
+    }
+
+    function initFileDropZone() {
+      const zone = document.getElementById('drop-zone');
+      const input = document.getElementById('file-input');
+      if (!zone || !input) return;
+      zone.addEventListener('click', () => input.click());
+      input.addEventListener('click', e => e.stopPropagation());
+      input.addEventListener('change', () => {
+        handleSelectedFiles(input.files);
+        input.value = '';
+      });
+      ['dragenter', 'dragover'].forEach(evt => zone.addEventListener(evt, e => {
+        e.preventDefault();
+        zone.classList.add('border-cyan-400');
+      }));
+      ['dragleave', 'drop'].forEach(evt => zone.addEventListener(evt, e => {
+        e.preventDefault();
+        zone.classList.remove('border-cyan-400');
+      }));
+      zone.addEventListener('drop', e => handleSelectedFiles(e.dataTransfer?.files));
+    }
+
+
+    function uploadFileToR2(file, onProgress) {
+      return new Promise(async (resolve, reject) => {
+        try {
+          const { upload_url, file_key, content_type } = await api(`/api/upload-url?filename=${encodeURIComponent(file.name)}`);
+          const xhr = new XMLHttpRequest();
+          xhr.open('PUT', upload_url);
+          xhr.setRequestHeader('Content-Type', content_type);
+          xhr.upload.onprogress = e => { if (e.lengthComputable) onProgress((e.loaded / e.total) * 100); };
+          xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve(file_key) : reject(new Error(`Upload failed (${xhr.status})`));
+          xhr.onerror = () => reject(new Error('Upload failed. Check your connection and try again.'));
+          xhr.send(file);
+        } catch (err) {
+          reject(err);
+        }
+      });
+    }
+
+    async function handleSelectedFiles(fileList) {
+      const files = Array.from(fileList || []);
+      if (files.length === 0) return;
+      if (!appState.backendOnline && !(await checkBackendHealth())) {
+        showToast('The print shop is offline right now, so files can\'t be uploaded. Please try again shortly.', 'error');
+        return;
+      }
+
+      for (const file of files) {
+        if (appState.fileQueue.length >= 20) {
+          showToast('You can add up to 20 files per order.', 'error');
+          break;
+        }
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        const type = ext === 'pdf' ? 'pdf' : ['jpg', 'jpeg', 'png'].includes(ext) ? 'img' : ['doc', 'docx'].includes(ext) ? 'doc' : null;
+        if (!type) {
+          showToast(`${file.name}: only PDF, Word, JPG and PNG files are accepted.`, 'error');
+          continue;
+        }
+
+        setUploadProgress(true, `<i class="fa-solid fa-circle-notch fa-spin"></i> Reading ${escapeHtml(file.name)}...`, 0);
+        let pages = 1;
+        try {
+          pages = await countDocumentPages(file, type);
+        } catch (e) {
+          showToast(`Could not read ${file.name}. Is it a valid PDF?`, 'error');
+          setUploadProgress(false);
+          continue;
+        }
+        if (type === 'doc') {
+          showToast(`Pages in Word files can't be counted here, so ${file.name} is priced as 1 page. Upload a PDF for an exact price.`, 'info');
+        }
+
+        try {
+          setUploadProgress(true, `<i class="fa-solid fa-circle-notch fa-spin"></i> Uploading ${escapeHtml(file.name)}...`, 0);
+          const key = await uploadFileToR2(file, pct => setUploadProgress(true, null, pct));
+          appState.fileQueue.push({
+            id: `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+            name: file.name,
+            sizeMB: +(file.size / (1024 * 1024)).toFixed(2),
+            pages,
+            type,
+            rawFile: file,
+            r2FileKey: key
+          });
+          setUploadProgress(true, `<i class="fa-solid fa-check"></i> Uploaded ${escapeHtml(file.name)}`, 100);
+          updateStudioState();
+        } catch (err) {
+          showToast(`Upload of ${file.name} failed: ${err.message}`, 'error');
+          setUploadProgress(false);
+        }
+      }
+      setTimeout(() => setUploadProgress(false), 1200);
+    }
+
+    // =====================================================================
+    // CHECKOUT & PAYMENT
+    // =====================================================================
+    function readOrderForm() {
+      const val = id => (document.getElementById(id)?.value || '').trim();
+      return {
+        customer_name: val('cust-name'),
+        phone: val('cust-phone'),
+        address: val('cust-street'),
+        landmark: val('cust-landmark'),
+        city: val('cust-city'),
+        pincode: val('cust-pincode'),
+        instructions: val('order-notes'),
+        files: appState.fileQueue.map(f => ({ key: f.r2FileKey, name: f.name, pages: f.pages, size_mb: f.sizeMB })),
+        page_range_mode: appState.pageRangeMode,
+        page_range_spec: appState.pageRangeMode === 'custom' ? val('custom-range-input') : '',
+        orientation: getCheckedValue('orientation-mode', 'portrait'),
+        n_up_layout: parseInt(document.getElementById('nup-layout')?.value, 10) || 1,
+        copies: Math.max(1, parseInt(document.getElementById('copy-count')?.value, 10) || 1),
+        color_mode: getCheckedValue('color-mode', 'bw'),
+        sides: getCheckedValue('duplex-mode', 'single'),
+        paper_size: document.getElementById('paper-size')?.value || 'A4',
+        paper_gsm: document.getElementById('paper-gsm')?.value || '75',
+        binding: getCheckedValue('binding-opt', 'none')
+      };
+    }
+
+    async function initiateCheckout() {
+      updateStudioState();
+      const form = readOrderForm();
+      const phoneDigits = form.phone.replace(/\D/g, '').slice(-10);
+
+      if (appState.fileQueue.length === 0) return showToast('Please upload a document to print first.', 'error');
+      if (appState.rangeError) return showToast(appState.rangeError, 'error');
+      if (!form.customer_name) return showToast('Please enter the recipient name.', 'error');
+      if (!/^[6-9]\d{9}$/.test(phoneDigits)) return showToast('Please enter a valid 10-digit mobile number.', 'error');
+      if (!form.address) return showToast('Please enter your delivery address.', 'error');
+      if (!/^\d{6}$/.test(form.pincode.replace(/\D/g, ''))) return showToast('Please enter a valid 6-digit pincode.', 'error');
+
+      const btn = document.getElementById('btn-checkout');
+      const original = btn ? btn.innerHTML : '';
+      if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Creating order...`; }
+      try {
+        const res = await api('/api/orders', { method: 'POST', body: form });
+        appState.checkout = {
+          orderId: res.order_id,
+          amount: Number(res.amount),
+          razorpayOrderId: res.razorpay_order_id || null,
+          razorpayKeyId: res.razorpay_key_id || null,
+          phone: phoneDigits,
+          customerName: form.customer_name
+        };
+        if (Math.abs(appState.checkout.amount - appState.currentCalculatedTotal) > 0.01) {
+          showToast(`Price updated to ₹${appState.checkout.amount.toFixed(2)} using the shop's current rates.`, 'info');
+        }
+        openPaymentModal();
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = original; }
+      }
+    }
+
+    function openPaymentModal() {
+      const c = appState.checkout;
+      if (!c) return;
+      const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+      setText('modal-pay-amount', c.amount.toFixed(2));
+      setText('modal-order-id-label', c.orderId);
+      const utrInput = document.getElementById('utr-input');
+      if (utrInput) utrInput.value = '';
+      document.getElementById('utr-validation-warning')?.classList.add('hidden');
+
+      const canRazorpay = !!(c.razorpayOrderId && window.Razorpay);
+      applyShopBranding();
+      switchPaymentMethodTab(canRazorpay ? 'razorpay' : 'upi');  // resets tab classes, so hide afterwards
+      document.getElementById('tab-pay-razorpay')?.classList.toggle('hidden', !canRazorpay);
+      document.getElementById('tab-pay-direct-upi')?.classList.toggle('col-span-2', !canRazorpay);
+      document.getElementById('payment-modal')?.classList.remove('hidden');
+    }
+
+        function closePaymentModal() {
+      document.getElementById('payment-modal')?.classList.add('hidden');
+    }
+
+    function validateUtrInput(value) {
+      const input = document.getElementById('utr-input');
+      const warning = document.getElementById('utr-validation-warning');
+      const clean = String(value || '').replace(/\D/g, '').slice(0, 12);
+      if (input && input.value !== clean) input.value = clean;
+      const ok = clean.length === 12;
+      if (warning) warning.classList.toggle('hidden', ok || clean.length === 0);
+      return ok;
+    }
+
+
+    function launchRazorpayGatewayCheckout() {
+      const c = appState.checkout;
+      if (!c || !c.razorpayOrderId) return showToast('Online payment is not available. Please use direct UPI.', 'error');
+      if (!window.Razorpay) return showToast('Payment window is still loading, please try again in a moment.', 'info');
+
+      const rzp = new Razorpay({
+        key: c.razorpayKeyId,
+        order_id: c.razorpayOrderId,
+        amount: Math.round(c.amount * 100),
+        currency: "INR",
+        name: appState.shopName,
+        description: `Print order ${c.orderId}`,
+        prefill: { name: c.customerName, contact: c.phone },
+        theme: { color: "#6366F1" },
+        handler: async function (response) {
+          try {
+            await api(`/api/orders/${encodeURIComponent(c.orderId)}/razorpay-verify`, { method: 'POST', body: response });
+            showOrderPlaced('Payment received. Your order is in the print queue!');
+          } catch (err) {
+            showToast(`Payment received but could not be confirmed (${err.message}). Contact the shop with order ${c.orderId}.`, 'error');
+          }
+        },
+        modal: { ondismiss: () => showToast("Payment window closed. You can retry or pay by UPI.", "info") }
+      });
+      rzp.on('payment.failed', r => showToast(`Payment failed: ${r.error?.description || 'please try again'}`, 'error'));
+      rzp.open();
+    }
+
+    async function submitOrderWithUtrVerification() {
+      const c = appState.checkout;
+      if (!c) return showToast('Checkout session expired. Please start again.', 'error');
+      const utrInput = document.getElementById('utr-input');
+      if (!validateUtrInput(utrInput?.value)) {
+        document.getElementById('utr-validation-warning')?.classList.remove('hidden');
+        return showToast('Enter the 12-digit UTR from your UPI payment receipt.', 'error');
+      }
+      const btn = document.getElementById('btn-confirm-pay');
+      const original = btn ? btn.innerHTML : '';
+      if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Submitting...`; }
+      try {
+        await api(`/api/orders/${encodeURIComponent(c.orderId)}/utr`, { method: 'POST', body: { phone: c.phone, utr: utrInput.value } });
+        showOrderPlaced('Order submitted! The shop will verify your UPI payment shortly.');
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = original; }
+      }
+    }
+
+    function showOrderPlaced(message) {
+      const c = appState.checkout;
+      appState.trackedOrder = { id: c.orderId, phone: c.phone };
+      try { localStorage.setItem('pf_last_order', JSON.stringify(appState.trackedOrder)); } catch (e) {}
+      closePaymentModal();
+      playOrderChime();
+      document.getElementById('receipt-order-id').textContent = c.orderId;
+      document.getElementById('receipt-customer').textContent = c.customerName;
+      document.getElementById('receipt-amount').textContent = c.amount.toFixed(2);
+      document.getElementById('receipt-modal').classList.remove('hidden');
+      showToast(message, 'success');
+
+      // Start a fresh order form
+      appState.checkout = null;
+      appState.fileQueue = [];
+      updateStudioState();
+    }
+
+    function trackNewlyCreatedOrder() {
+      document.getElementById('receipt-modal')?.classList.add('hidden');
+      fillTrackingInputs(appState.trackedOrder);
+      switchView('track');
+      performTrackingSearch(true);
+    }
+
+    // =====================================================================
+    // CUSTOMER ORDER TRACKING (order ID + phone)
+    // =====================================================================
+    function fillTrackingInputs(t) {
+      if (!t) return;
+      const idEl = document.getElementById('track-search-input');
+      const phoneEl = document.getElementById('track-phone-input');
+      if (idEl && !idEl.value) idEl.value = t.id;
+      if (phoneEl && !phoneEl.value) phoneEl.value = t.phone;
+    }
+
+    async function performTrackingSearch(silent = false) {
+      const id = (document.getElementById('track-search-input')?.value || '').trim().toUpperCase();
+      const phone = (document.getElementById('track-phone-input')?.value || '').replace(/\D/g, '').slice(-10);
+      const box = document.getElementById('tracking-result-box');
+      if (!id || phone.length !== 10) {
+        if (!silent) showToast('Enter your Order ID and 10-digit mobile number.', 'error');
+        return;
+      }
+      try {
+        const row = await api(`/api/track?order_id=${encodeURIComponent(id)}&phone=${encodeURIComponent(phone)}`);
+        appState.trackedOrder = { id: row.id, phone };
+        box?.classList.remove('hidden');
+        renderTrackingResult(mapSupabaseRowToOrder(row));
+      } catch (err) {
+        box?.classList.add('hidden');
+        if (!silent || err.status !== 404) showToast(err.message, 'error');
+      }
+    }
+
+        function renderTrackingResult(order) {
+      const setText = (id, txt) => { const el = document.getElementById(id); if (el) el.innerHTML = txt; };
+      const status = order.status || 'Order Received';
+      const lower = status.toLowerCase();
+      const isRejected = lower.includes('rejected');
+      const isAwaiting = lower.includes('awaiting');  // 'Awaiting Payment' or 'Awaiting UTR Verification'
+
+      setText('track-order-id-label', escapeHtml(order.id));
+      setText('track-timestamp', `Placed ${order.date || 'Today'}`);
+      setText('track-file', order.fileName);
+      setText('track-pages', `${order.pages} pg × ${order.copies}`);
+      setText('track-type', `${order.nup} • ${order.color}`);
+      setText('track-mode', order.address || 'Doorstep Delivery');
+
+      const pill = document.getElementById('track-status-pill');
+      if (pill) {
+        pill.textContent = status;
+        const tone = isRejected ? 'rose' : isAwaiting ? 'amber' : status === 'Delivered' ? 'emerald' : 'indigo';
+        const tones = {
+          rose: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30',
+          amber: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+          emerald: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+          indigo: 'bg-indigo-500/15 text-indigo-600 dark:text-cyan-400 border-indigo-500/30'
+        };
+        pill.className = `px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${tones[tone]}`;
+      }
+
+      const cloud = document.getElementById('track-cloud-badge');
+      if (cloud) {
+        const purged = order.cloudStatus === 'PURGED';
+        cloud.innerHTML = purged
+          ? `<i class="fa-solid fa-fire-flame-curved"></i><span>File Printed &amp; Purged</span>`
+          : `<i class="fa-solid fa-cloud-lock"></i><span>File stored securely</span>`;
+      }
+
+      const banner = document.getElementById('track-rejection-banner');
+      if (banner) banner.classList.toggle('hidden', !isRejected);
+      if (isRejected) setText('track-rejection-reason', order.rejectionReason || 'Your payment could not be verified.');
+
+      const stageIdx = (isRejected || isAwaiting) ? -1 : TRACK_STAGES.indexOf(status);
+      const fill = document.getElementById('track-stepper-fill');
+      if (fill) fill.style.width = stageIdx <= 0 ? '0%' : `${(stageIdx / (TRACK_STAGES.length - 1)) * 100}%`;
+      for (let i = 1; i <= TRACK_STAGES.length; i++) {
+        const node = document.getElementById(`step-node-${i}`);
+        if (!node) continue;
+        const reached = i - 1 <= stageIdx;
+        node.classList.toggle('bg-indigo-600', reached);
+        node.classList.toggle('text-white', reached);
+        node.classList.toggle('bg-slate-200', !reached);
+        node.classList.toggle('dark:bg-slate-700', !reached);
+        node.classList.toggle('text-slate-500', !reached);
+      }
+    }
+
+
+    async function resubmitCustomerUtr() {
+      const input = document.getElementById('track-resubmit-utr');
+      const utr = (input?.value || '').replace(/\D/g, '');
+      if (utr.length !== 12) return showToast('Enter exactly 12 digits from your UPI receipt.', 'error');
+      const t = appState.trackedOrder;
+      if (!t) return showToast('Search for your order first.', 'error');
+      try {
+        await api(`/api/orders/${encodeURIComponent(t.id)}/utr`, { method: 'POST', body: { phone: t.phone, utr } });
+        if (input) input.value = '';
+        await performTrackingSearch(true);
+        showToast('UTR resubmitted. The shop will re-verify your payment.', 'success');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    // Converts an `orders` row from the API into the shape the UI renders (all text escaped)
+        // Converts a Supabase `orders` row into the shape the UI renders
+    function mapSupabaseRowToOrder(row) {
+      const created = row.created_at ? new Date(row.created_at) : new Date();
+      const isToday = created.toDateString() === new Date().toDateString();
+      const timeStr = created.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+      const dateStr = isToday ? `Today, ${timeStr}` : `${created.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}, ${timeStr}`;
+      const orientation = String(row.orientation || 'portrait');
+      const fileStatus = String(row.file_status || 'IN CLOUD').toUpperCase();
+
+      return {
+        id: row.id,
+        date: dateStr,
+        createdAt: created.toISOString(),
+        customerName: escapeHtml(row.customer_name || 'Customer'),
+        phone: escapeHtml(row.phone || ''),
+        fileName: escapeHtml(row.file_name || 'Document.pdf'),
+        fileKey: row.file_key,
+        sizeMB: Number(row.file_size_mb) || 0,
+        pages: Number(row.effective_pages) || 0,
+        pageRange: row.page_range_mode === 'custom'
+          ? `Custom (${escapeHtml(row.page_range_spec)})`
+          : `All (1-${Number(row.total_doc_pages) || 0})`,
+        orientation: orientation.charAt(0).toUpperCase() + orientation.slice(1),
+        nup: `${Number(row.n_up_layout) || 1}-Up`,
+        copies: Number(row.copies) || 1,
+        color: escapeHtml(row.color_mode || 'B&W'),
+        duplex: escapeHtml(row.sides || 'Single Sided'),
+        paper: `${escapeHtml(row.paper_size || 'A4')} • ${escapeHtml(row.paper_gsm || '75')} GSM`,
+        binding: BINDING_LABELS[String(row.binding || 'NONE').toUpperCase()] || escapeHtml(row.binding),
+        amount: row.total_amount === null || row.total_amount === undefined ? null : Number(row.total_amount),
+        landmark: escapeHtml(row.landmark || ''),
+        instructions: escapeHtml(row.instructions || ''),
+        deliveryMode: 'Doorstep Courier',
+        address: escapeHtml([row.address, row.pincode].filter(Boolean).join(' - ')),
+        utr: escapeHtml(row.utr_number || ''),
+        status: row.order_status || 'Order Received',
+        rejectionReason: escapeHtml(row.rejection_reason || ''),
+        cloudStatus: fileStatus === 'PURGED' ? 'PURGED' : 'IN_CLOUD'
+      };
+    }
+
+
+    // =====================================================================
+    // STAFF CONSOLE (every action is authorised by the backend with the PIN)
+    // =====================================================================
+        function requestAdminAccess() {
+      if (appState.staffRole) {
+        switchView('admin');
+      } else {
+        openStaffAuthModal();
+      }
+    }
+
+    function openStaffAuthModal() {
+      const input = document.getElementById('staff-pin-input');
+      const modal = document.getElementById('staff-auth-modal');
+      const lockoutMsg = document.getElementById('pin-lockout-msg');
+      if (lockoutMsg) lockoutMsg.classList.add('hidden');
+      if (input) input.value = '';
+      if (modal) {
+        modal.classList.remove('hidden');
+        setTimeout(() => input && input.focus(), 100);
+      }
+    }
+
+    function closeStaffAuthModal() {
+      const modal = document.getElementById('staff-auth-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+
+    async function verifyStaffPin() {
+      const input = document.getElementById('staff-pin-input');
+      const lockoutMsg = document.getElementById('pin-lockout-msg');
+      const pin = (input?.value || '').trim();
+      if (!pin) return;
+      const btn = document.getElementById('btn-verify-pin');
+      if (btn) btn.disabled = true;
+      try {
+        const { role } = await api('/api/staff/login', { method: 'POST', body: { pin } });
+        appState.staffRole = role;
+        appState.staffPin = pin;   // memory only: closing or reloading the tab logs out
+        lockoutMsg?.classList.add('hidden');
+        closeStaffAuthModal();
+        applyRolePermissionsUI();
+        switchView('admin');
+        await fetchStaffOrders(false);
+        showToast(role === 'owner' ? 'Signed in as shop owner' : 'Signed in as shop worker', 'success');
+      } catch (err) {
+        if (lockoutMsg) {
+          lockoutMsg.textContent = err.message;
+          lockoutMsg.classList.remove('hidden');
+        }
+        showToast(err.message, 'error');
+        if (input) { input.value = ''; input.focus(); }
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function applyRolePermissionsUI() {
+      const isOwner = appState.staffRole === 'owner';
+      const roleBadge = document.getElementById('active-role-badge');
+      const lockIcon = document.getElementById('admin-lock-icon');
+      const btnLabel = document.getElementById('admin-btn-label');
+      if (lockIcon) lockIcon.className = "fa-solid fa-unlock-keyhole text-emerald-400 text-sm";
+      if (btnLabel) btnLabel.textContent = "Staff Console";
+      if (roleBadge) {
+        roleBadge.className = `px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${isOwner ? 'bg-cyan-400' : 'bg-amber-400'} text-slate-950`;
+        roleBadge.textContent = isOwner ? "OWNER" : "WORKER";
+      }
+      document.getElementById('btn-owner-rates')?.classList.toggle('hidden', !isOwner);
+      document.getElementById('owner-backend-bar')?.classList.toggle('hidden', !isOwner || SERVED_BY_BACKEND);
+      document.getElementById('worker-mode-banner')?.classList.toggle('hidden', isOwner);
+      const urlInput = document.getElementById('backend-api-url-input');
+      if (urlInput) urlInput.value = BACKEND_API_URL;
+      updateKpis();
+      filterAdminOrders();
+    }
+
+    function lockAdminSession() {
+      appState.staffRole = null;
+      appState.staffPin = null;
+      appState.orders = [];
+      stopStaffPolling();
+      const lockIcon = document.getElementById('admin-lock-icon');
+      const btnLabel = document.getElementById('admin-btn-label');
+      if (lockIcon) lockIcon.className = "fa-solid fa-lock text-cyan-300 text-sm";
+      if (btnLabel) btnLabel.textContent = "Staff Login";
+      renderAdminOrdersTable([]);
+      switchView('order');
+      showToast("Signed out of the staff console.", "info");
+    }
+
+    function handleStaffAuthError(err) {
+      if (err.status === 401 || err.status === 429) {
+        showToast('Your staff session is no longer valid. Please sign in again.', 'error');
+        lockAdminSession();
+        return true;
+      }
+      return false;
+    }
+
+    async function fetchStaffOrders(notify = false) {
+      if (!appState.staffRole) return;
+      try {
+        const { orders } = await api('/api/admin/orders', { pin: appState.staffPin });
+        const known = new Set(appState.orders.map(o => o.id));
+        const mapped = orders.map(mapSupabaseRowToOrder);
+        const fresh = appState.orders.length > 0 ? mapped.filter(o => !known.has(o.id)) : [];
+        appState.orders = mapped;
+        filterAdminOrders();
+        updateKpis();
+        if (fresh.length) {
+          playOrderChime();
+          showToast(`${fresh.length} new order${fresh.length > 1 ? 's' : ''}: ${fresh.map(o => o.id).join(', ')}`, 'success');
+        }
+        if (notify) showToast(`Loaded ${orders.length} orders.`, 'success');
+      } catch (err) {
+        if (!handleStaffAuthError(err) && notify) showToast(err.message, 'error');
+      }
+    }
+
+    function startStaffPolling() {
+      stopStaffPolling();
+      if (!appState.staffRole) return;
+      staffPollTimer = setInterval(() => {
+        if (!document.hidden) fetchStaffOrders(false);
+      }, STAFF_POLL_MS);
+    }
+
+    function stopStaffPolling() {
+      if (staffPollTimer) clearInterval(staffPollTimer);
+      staffPollTimer = null;
+    }
+
+    function renderAdminOrdersTable(customList = null) {
+      const tbody = document.getElementById('admin-orders-tbody');
+      const countLabel = document.getElementById('orders-count-label');
+      if (!tbody) return;
+      const list = customList || appState.orders;
+      if (countLabel) countLabel.textContent = list.length;
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400">No orders to show.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = list.map(order => {
+        const status = order.status || '';
+        const isPurged = order.cloudStatus === 'PURGED';
+        const isAwaitingUtr = status === UTR_PENDING_STATUS;
+        const isUnpaid = status === AWAITING_PAYMENT_STATUS;
+        const isRejected = status === 'Payment Rejected';
+        const isPaid = PAID_STAGES.includes(status);
+        const id = escapeHtml(order.id);
+
+        let statusCell;
+        if (isAwaitingUtr) {
+          statusCell = `
+            <div class="flex items-center gap-1.5">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">Verify UTR</span>
+              <button onclick="acceptPaymentOrder('${id}')" class="p-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px]" title="UTR found in bank account: accept"><i class="fa-solid fa-check"></i></button>
+              <button onclick="promptRejectOrderModal('${id}')" class="p-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[10px]" title="Reject payment"><i class="fa-solid fa-xmark"></i></button>
+            </div>`;
+        } else if (isUnpaid) {
+          statusCell = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-500/15 text-slate-500 border border-slate-500/30" title="Customer started checkout but has not paid">Not paid yet</span>`;
+        } else if (isRejected) {
+          statusCell = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">Rejected</span>`;
+        } else {
+          statusCell = `
+            <select onchange="updateOrderStatus('${id}', this.value)" class="text-[11px] bg-slate-100 dark:bg-obsidian-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 font-bold text-slate-700 dark:text-slate-300">
+              ${TRACK_STAGES.map(s => `<option value="${s}" ${status === s ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>`;
+        }
+
+        const canDownload = isPaid && !isPurged;
+        const fileBadge = isPurged
+          ? `<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-200 dark:bg-slate-800 text-slate-600">PURGED</span>`
+          : `<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-500">STORED (${order.sizeMB.toFixed(1)} MB)</span>`;
+        const amount = order.amount === null ? '—' : `₹${order.amount.toFixed(2)}`;
+
+        return `
+          <tr class="hover:bg-slate-50 dark:hover:bg-obsidian-900/60 transition-colors">
+            <td class="py-3 px-4 font-mono font-bold text-indigo-600 dark:text-cyan-400">${id}<div class="text-[9px] text-slate-400 font-normal">${order.date}</div></td>
+            <td class="py-3 px-4"><div class="font-bold text-slate-900 dark:text-white">${order.customerName}</div><div class="text-[10px] text-slate-400 font-mono">${order.phone}</div></td>
+            <td class="py-3 px-4">
+              <div class="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[180px]" title="${order.fileName}">${order.fileName}</div>
+              <div class="text-[10px] text-slate-400">${order.pageRange} • ${order.copies}× • ${order.nup} • ${order.color} • ${order.duplex} • ${order.paper} • ${order.binding}</div>
+              ${order.instructions ? `<div class="text-[10px] text-amber-600 dark:text-amber-400 truncate max-w-[180px]" title="${order.instructions}">Note: ${order.instructions}</div>` : ''}
+            </td>
+            <td class="py-3 px-4">${fileBadge}</td>
+            <td class="py-3 px-4"><div class="font-mono font-bold">${amount}</div><div class="text-[9px] font-mono text-slate-400 truncate max-w-[110px]" title="${order.utr}">${order.utr ? 'Ref: ' + order.utr : ''}</div></td>
+            <td class="py-3 px-4 max-w-[180px]"><div class="truncate" title="${order.address}">${order.address}</div>${order.landmark ? `<div class="text-[10px] text-slate-400 truncate">${order.landmark}</div>` : ''}</td>
+            <td class="py-3 px-4">${statusCell}</td>
+            <td class="py-3 px-4 text-right">
+              <button onclick="adminDownloadAndPurge('${id}')" ${canDownload ? '' : 'disabled'} title="${canDownload ? 'Download the file, then delete it from storage' : isPurged ? 'Already downloaded and deleted' : 'Payment not verified yet'}"
+                class="px-2.5 py-1.5 rounded-lg ${canDownload ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'} font-extrabold text-[11px] shadow-sm flex items-center gap-1.5 ml-auto">
+                <i class="fa-solid fa-cloud-arrow-down"></i><span>${isPurged ? 'Purged' : 'Download'}</span>
+              </button>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+        function filterAdminOrders() {
+      const q = (document.getElementById('admin-search-input')?.value || '').trim().toLowerCase();
+      const stage = document.getElementById('admin-status-filter')?.value || 'ALL';
+      const filtered = appState.orders.filter(o => {
+        const matchesStage = stage === 'ALL' || o.status === stage;
+        const haystack = [o.id, o.customerName, o.phone, o.fileName, o.utr, o.address].join(' ').toLowerCase();
+        return matchesStage && (!q || haystack.includes(q));
+      });
+      renderAdminOrdersTable(filtered);
+    }
+
+    function promptRejectOrderModal(orderId) {
+      pendingRejectOrderId = orderId;
+      const lbl = document.getElementById('modal-reject-order-id');
+      const modal = document.getElementById('reject-order-modal');
+      if (lbl) lbl.textContent = orderId;
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeRejectOrderModal() {
+      pendingRejectOrderId = null;
+      const modal = document.getElementById('reject-order-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function selectQuickRejectReason(reason) {
+      const input = document.getElementById('reject-reason-input');
+      if (input) input.value = reason;
+    }
+
+
+    async function patchOrder(orderId, body, successMsg, type = 'success') {
+      try {
+        await api(`/api/admin/orders/${encodeURIComponent(orderId)}`, { method: 'PATCH', body, pin: appState.staffPin });
+        showToast(successMsg, type);
+      } catch (err) {
+        if (!handleStaffAuthError(err)) showToast(err.message, 'error');
+      }
+      await fetchStaffOrders(false);
+    }
+
+    async function confirmRejectOrderPayment() {
+      if (!pendingRejectOrderId) return;
+      const id = pendingRejectOrderId;
+      const reason = document.getElementById('reject-reason-input')?.value.trim() || "Payment UTR could not be verified in the shop's bank account.";
+      closeRejectOrderModal();
+      await patchOrder(id, { status: 'Payment Rejected', rejection_reason: reason }, `Order ${id} rejected. The customer will see the reason when tracking.`, 'purge');
+    }
+
+    async function acceptPaymentOrder(orderId) {
+      await patchOrder(orderId, { status: 'Order Received' }, `Payment accepted for ${orderId}.`);
+    }
+
+    async function updateOrderStatus(orderId, newStatus) {
+      await patchOrder(orderId, { status: newStatus }, `Order ${orderId} set to "${newStatus}".`);
+    }
+
+    async function adminDownloadAndPurge(orderId) {
+      const order = appState.orders.find(o => o.id === orderId);
+      if (!order) return;
+      showToast(`Downloading ${orderId}...`, 'info');
+      try {
+        const res = await fetch(`${BACKEND_API_URL}/api/admin/download/${encodeURIComponent(orderId)}`, {
+          headers: { 'X-Staff-Pin': appState.staffPin || '' }
+        });
+        if (!res.ok) {
+          let detail = `Download failed (${res.status})`;
+          try { detail = (await res.json()).detail || detail; } catch (e) {}
+          const err = new Error(detail);
+          err.status = res.status;
+          throw err;
+        }
+        const disposition = res.headers.get('Content-Disposition') || '';
+        const match = disposition.match(/filename="([^"]+)"/);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = match ? match[1] : `${orderId}`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showToast(`Downloaded ${orderId}. The file is now deleted from storage.`, 'purge');
+      } catch (err) {
+        if (!handleStaffAuthError(err)) showToast(err.message, 'error');
+      }
+      setTimeout(() => fetchStaffOrders(false), 1500);
+    }
+
+    function updateKpis() {
+      const orders = appState.orders;
+      const setVal = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+      setVal('kpi-pending-jobs', orders.filter(o => ['Order Received', 'Printing in Progress', 'Binding & QC', UTR_PENDING_STATUS].includes(o.status)).length);
+      setVal('kpi-storage', orders.filter(o => o.cloudStatus !== 'PURGED' && PAID_STAGES.includes(o.status)).reduce((acc, o) => acc + o.sizeMB, 0).toFixed(1) + ' MB');
+      setVal('kpi-purged', orders.filter(o => o.cloudStatus === 'PURGED').length);
+
+      const revWrap = document.getElementById('kpi-revenue-wrap');
+      const revSub = document.getElementById('kpi-revenue-sub');
+      if (appState.staffRole !== 'owner') {
+        if (revWrap) revWrap.innerHTML = `<span class="text-sm font-mono text-slate-400">OWNER ONLY</span>`;
+        if (revSub) revSub.textContent = "Hidden in worker mode";
+        return;
+      }
+      const today = new Date().toDateString();
+      const rev = orders
+        .filter(o => PAID_STAGES.includes(o.status) && new Date(o.createdAt).toDateString() === today)
+        .reduce((acc, o) => acc + (o.amount || 0), 0);
+      if (revWrap) revWrap.textContent = `₹${rev.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+      if (revSub) revSub.textContent = "Paid orders placed today";
+    }
+
+    function openPriceModal() {
+      if (appState.staffRole !== 'owner') {
+        showToast("Only the shop owner can change shop settings.", "error");
+        return;
+      }
+      const r = appState.rates;
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+      set('cfg-shop-name', appState.shopName);
+      set('cfg-upi-id', appState.upiId);
+      set('cfg-bw', r.bwPage);
+      set('cfg-bw-duplex', r.bwDuplex);
+      set('cfg-color', r.colorPage);
+      set('cfg-color-duplex', r.colorDuplex);
+      set('cfg-staple', r.stapleBinding);
+      set('cfg-spiral', r.spiralBinding);
+      set('cfg-wiro', r.wiroBinding);
+      set('cfg-hard', r.hardBinding);
+      set('cfg-delivery', r.deliveryFee);
+      set('cfg-free-threshold', r.freeDeliveryThreshold);
+      document.getElementById('price-modal').classList.remove('hidden');
+    }
+
+        function closePriceModal() {
+      document.getElementById('price-modal').classList.add('hidden');
+    }
+
+
+    async function savePriceConfig() {
+      const num = id => parseFloat(document.getElementById(id)?.value);
+      const body = {
+        shop_name: (document.getElementById('cfg-shop-name')?.value || '').trim() || 'PrintFlow',
+        upi_id: (document.getElementById('cfg-upi-id')?.value || '').trim(),
+        rates: {
+          bw_page: num('cfg-bw'), bw_duplex: num('cfg-bw-duplex'),
+          color_page: num('cfg-color'), color_duplex: num('cfg-color-duplex'),
+          staple: num('cfg-staple'), spiral: num('cfg-spiral'), wiro: num('cfg-wiro'), hard: num('cfg-hard'),
+          delivery_fee: num('cfg-delivery'), free_delivery_threshold: num('cfg-free-threshold')
+        }
+      };
+      if (Object.values(body.rates).some(v => !Number.isFinite(v) || v < 0)) {
+        return showToast('Every price must be a number of 0 or more.', 'error');
+      }
+      const btn = document.getElementById('btn-save-settings');
+      if (btn) btn.disabled = true;
+      try {
+        applySettings(await api('/api/admin/settings', { method: 'PUT', body, pin: appState.staffPin }));
+        closePriceModal();
+        showToast('Shop settings saved. New prices apply to new orders.', 'success');
+      } catch (err) {
+        if (!handleStaffAuthError(err)) showToast(err.message, 'error');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    // =====================================================================
+    // STARTUP
+    // =====================================================================
+    window.onload = async function() {
+      switchView('order');
+      initFileDropZone();
+      updateStudioState();
+      renderAdminOrdersTable([]);
+      try { appState.trackedOrder = JSON.parse(localStorage.getItem('pf_last_order') || 'null'); } catch (e) {}
+      fillTrackingInputs(appState.trackedOrder);
+      if (await checkBackendHealth()) await loadShopSettings();
+      setInterval(checkBackendHealth, 60000);
+    };
+  </script>
+
+</body></html>

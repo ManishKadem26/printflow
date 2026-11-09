@@ -1,0 +1,8 @@
+# Never ship secrets or local tooling in the image
+backend/.env
+backend/.venv/
+backend/tests/
+**/__pycache__/
+.claude/
+.git/
+*.bak
