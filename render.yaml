@@ -24,9 +24,6 @@ services:
         sync: false
       - key: OWNER_SECRET_PIN
         sync: false
-      - key: RAZORPAY_KEY_ID
-        sync: false
-      - key: RAZORPAY_KEY_SECRET
-        sync: false
-      - key: ALLOWED_ORIGINS
-        sync: false
+      # Optional, add later in the Render dashboard if needed:
+      #   RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET  (online payments)
+      #   ALLOWED_ORIGINS                        (your website address; defaults to any)
